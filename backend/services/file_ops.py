@@ -1,6 +1,7 @@
 """
 File operations service: move, rename, delete with safety checks.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -18,7 +19,7 @@ def move_file(src: str, dest_dir: str) -> str:
     Move *src* into *dest_dir*.  Returns the new full path.
     Raises FileOperationError on any failure.
     """
-    src_path  = Path(src)
+    src_path = Path(src)
     dest_path = Path(dest_dir)
 
     if not src_path.exists():
@@ -30,9 +31,7 @@ def move_file(src: str, dest_dir: str) -> str:
 
     # Avoid accidental overwrites
     if new_path.exists():
-        raise FileOperationError(
-            f"A file named '{src_path.name}' already exists in '{dest_dir}'."
-        )
+        raise FileOperationError(f"A file named '{src_path.name}' already exists in '{dest_dir}'.")
 
     try:
         shutil.move(str(src_path), str(new_path))

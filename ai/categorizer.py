@@ -8,17 +8,21 @@ Strategy (in priority order):
 
 The module exposes a single `categorize(file_path)` function.
 """
+
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
-from typing import Optional
 
 from backend.config import (
-    AUDIO_EXTENSIONS, DOC_EXTENSIONS,
-    IMAGE_EXTENSIONS, VIDEO_EXTENSIONS,
-    OPENAI_API_KEY, AI_BASE_URL, AI_MODEL, logger,
+    AI_BASE_URL,
+    AI_MODEL,
+    AUDIO_EXTENSIONS,
+    DOC_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    OPENAI_API_KEY,
+    VIDEO_EXTENSIONS,
+    logger,
 )
 
 # ── Category constants ────────────────────────────────────────────────────────
@@ -29,12 +33,40 @@ CATEGORIES = ["Games", "Movies", "Documents", "Music", "Images", "Software", "Ot
 
 # Keywords that strongly suggest a category when found in directory name or file name
 _KEYWORD_MAP: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"\bgame[s]?\b|\bsteam\b|\bepic\b|\bgog\b|\bmod[s]?\b|\bsave[s]?\b", re.I), "Games"),
-    (re.compile(r"\bmovie[s]?\b|\bfilm[s]?\b|\bcinema\b|\bseries\b|\bseason\b|\bepis\b|\bsubs?\b", re.I), "Movies"),
-    (re.compile(r"\bmusic\b|\balbum\b|\bartist\b|\btrack[s]?\b|\bplaylist\b|\bsongs?\b", re.I), "Music"),
-    (re.compile(r"\bdoc[s]?\b|\bdocument[s]?\b|\breport[s]?\b|\binvoice\b|\bcontract\b|\bresume\b|\bcv\b", re.I), "Documents"),
-    (re.compile(r"\bphoto[s]?\b|\bpicture[s]?\b|\bimage[s]?\b|\bwallpaper[s]?\b|\bscreenshot[s]?\b", re.I), "Images"),
-    (re.compile(r"\bsetup\b|\binstaller\b|\bportable\b|\bsoftware\b|\bapp[s]?\b|\bprogram\b", re.I), "Software"),
+    (
+        re.compile(r"\bgame[s]?\b|\bsteam\b|\bepic\b|\bgog\b|\bmod[s]?\b|\bsave[s]?\b", re.I),
+        "Games",
+    ),
+    (
+        re.compile(
+            r"\bmovie[s]?\b|\bfilm[s]?\b|\bcinema\b|\bseries\b|\bseason\b|\bepis\b|\bsubs?\b", re.I
+        ),
+        "Movies",
+    ),
+    (
+        re.compile(r"\bmusic\b|\balbum\b|\bartist\b|\btrack[s]?\b|\bplaylist\b|\bsongs?\b", re.I),
+        "Music",
+    ),
+    (
+        re.compile(
+            r"\bdoc[s]?\b|\bdocument[s]?\b|\breport[s]?\b|\binvoice\b|\bcontract\b|\bresume\b|\bcv\b",
+            re.I,
+        ),
+        "Documents",
+    ),
+    (
+        re.compile(
+            r"\bphoto[s]?\b|\bpicture[s]?\b|\bimage[s]?\b|\bwallpaper[s]?\b|\bscreenshot[s]?\b",
+            re.I,
+        ),
+        "Images",
+    ),
+    (
+        re.compile(
+            r"\bsetup\b|\binstaller\b|\bportable\b|\bsoftware\b|\bapp[s]?\b|\bprogram\b", re.I
+        ),
+        "Software",
+    ),
 ]
 
 _EXT_TO_CATEGORY: dict[str, str] = {}
@@ -51,7 +83,7 @@ for ext in DOC_EXTENSIONS:
 _EXT_TO_CATEGORY[".exe"] = "Software"
 _EXT_TO_CATEGORY[".msi"] = "Software"
 _EXT_TO_CATEGORY[".lnk"] = "Other"
-_EXT_TO_CATEGORY[".iso"] = "Other"   # ambiguous — resolved at folder level
+_EXT_TO_CATEGORY[".iso"] = "Other"  # ambiguous — resolved at folder level
 
 
 def _rule_based(path: Path) -> str:
@@ -62,7 +94,7 @@ def _rule_based(path: Path) -> str:
         return _EXT_TO_CATEGORY[ext]
 
     # 2. Check file name and parent directories for keywords
-    search_text = " ".join(path.parts[-4:])   # last 4 path components
+    search_text = " ".join(path.parts[-4:])  # last 4 path components
     for pattern, category in _KEYWORD_MAP:
         if pattern.search(search_text):
             return category
@@ -72,7 +104,7 @@ def _rule_based(path: Path) -> str:
 
 # ── Sklearn classifier (optional lightweight ML) ──────────────────────────────
 
-_clf = None   # lazy-loaded
+_clf = None  # lazy-loaded
 
 
 def _build_classifier():
@@ -114,16 +146,18 @@ def _build_classifier():
         ("data file archive zip rar 7z", "Other"),
     ]
 
-    texts, labels = zip(*training)
-    pipeline = Pipeline([
-        ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
-        ("clf",   LogisticRegression(max_iter=1000)),
-    ])
+    texts, labels = zip(*training, strict=False)
+    pipeline = Pipeline(
+        [
+            ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
+            ("clf", LogisticRegression(max_iter=1000)),
+        ]
+    )
     pipeline.fit(texts, labels)
     return pipeline
 
 
-def _ml_categorize(path: Path) -> Optional[str]:
+def _ml_categorize(path: Path) -> str | None:
     """Use the sklearn classifier as a secondary signal."""
     global _clf
     if _clf is None:
@@ -140,7 +174,8 @@ def _ml_categorize(path: Path) -> Optional[str]:
 
 # ── OpenAI fallback ───────────────────────────────────────────────────────────
 
-def _openai_categorize(path: Path) -> Optional[str]:
+
+def _openai_categorize(path: Path) -> str | None:
     """
     Categorize using an OpenAI-compatible chat API.
 
@@ -157,11 +192,11 @@ def _openai_categorize(path: Path) -> Optional[str]:
     try:
         import openai  # type: ignore
     except ImportError:
-        return None   # optional dependency not installed
+        return None  # optional dependency not installed
     try:
         client = openai.OpenAI(
-            api_key=OPENAI_API_KEY or "ollama",   # Ollama/LM Studio accept any value
-            base_url=AI_BASE_URL or None,          # None = default OpenAI cloud URL
+            api_key=OPENAI_API_KEY or "ollama",  # Ollama/LM Studio accept any value
+            base_url=AI_BASE_URL or None,  # None = default OpenAI cloud URL
         )
         prompt = (
             f"Classify the following file path into exactly ONE of these categories: "
@@ -181,6 +216,7 @@ def _openai_categorize(path: Path) -> Optional[str]:
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def categorize(file_path: str | Path) -> str:
     """
@@ -211,18 +247,35 @@ def categorize(file_path: str | Path) -> str:
 # ── Game-folder asset extensions ─────────────────────────────────────────────
 # Files commonly found inside a game installation (alongside an .exe)
 _GAME_ASSET_EXTENSIONS = {
-    ".pak", ".vpk", ".bsp", ".wad", ".gcf", ".ncf",  # game data packs
-    ".dll",                                              # shared libs (also in games)
-    ".cfg", ".ini", ".conf",                            # config files
-    ".sav", ".save",                                    # save files
-    ".dat", ".db",                                      # data files
-    ".nif", ".dds", ".tga",                             # 3D/texture formats
-    ".ogg", ".wav",                                     # audio in games
-    ".bik", ".bk2",                                     # game video cutscenes
-    ".esm", ".esp", ".esl",                            # Bethesda plugin formats
-    ".xnb",                                             # XNA/MonoGame content
-    ".unity3d", ".assets",                              # Unity game bundles
-    ".uasset", ".umap",                                 # Unreal Engine assets
+    ".pak",
+    ".vpk",
+    ".bsp",
+    ".wad",
+    ".gcf",
+    ".ncf",  # game data packs
+    ".dll",  # shared libs (also in games)
+    ".cfg",
+    ".ini",
+    ".conf",  # config files
+    ".sav",
+    ".save",  # save files
+    ".dat",
+    ".db",  # data files
+    ".nif",
+    ".dds",
+    ".tga",  # 3D/texture formats
+    ".ogg",
+    ".wav",  # audio in games
+    ".bik",
+    ".bk2",  # game video cutscenes
+    ".esm",
+    ".esp",
+    ".esl",  # Bethesda plugin formats
+    ".xnb",  # XNA/MonoGame content
+    ".unity3d",
+    ".assets",  # Unity game bundles
+    ".uasset",
+    ".umap",  # Unreal Engine assets
 }
 
 # Keywords in the folder NAME that strongly indicate a game install
@@ -255,24 +308,20 @@ def _is_game_folder(folder_path: Path, ext_set: set[str]) -> bool:
     if _INSTALLER_PATTERNS.search(folder_text):
         return False
 
-    has_exe  = ".exe" in ext_set
-    has_iso  = ".iso" in ext_set
+    has_exe = ".exe" in ext_set
+    has_iso = ".iso" in ext_set
     game_assets = ext_set & _GAME_ASSET_EXTENSIONS
 
     # Strong keyword signal in path → Game
-    if _GAME_FOLDER_PATTERNS.search(folder_text):
-        if has_exe or has_iso:
-            return True
+    if _GAME_FOLDER_PATTERNS.search(folder_text) and (has_exe or has_iso):
+        return True
 
     # Exe + multiple game-asset types → very likely a game
     if has_exe and len(game_assets) >= 2:
         return True
 
     # ISO/disc image without video files → likely a game disc
-    if has_iso and not (ext_set & VIDEO_EXTENSIONS):
-        return True
-
-    return False
+    return bool(has_iso and not ext_set & VIDEO_EXTENSIONS)
 
 
 def categorize_folder(folder_path: str | Path, file_extensions: list[str]) -> str:
@@ -281,7 +330,7 @@ def categorize_folder(folder_path: str | Path, file_extensions: list[str]) -> st
     Used for group detection — called with the NAMED group root, not a
     generic sub-folder like 'bin' or 'data'.
     """
-    path    = Path(folder_path)
+    path = Path(folder_path)
     ext_set = {e.lower() for e in file_extensions}
 
     # ── Game detection (must come before generic ext lookup) ──────────────────

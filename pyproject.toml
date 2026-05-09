@@ -42,6 +42,8 @@ ignore = ["E501"]   # line length handled by formatter
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+# FastAPI uses Depends() in function defaults by design — suppress false positives
+"backend/routers/*.py" = ["B008"]
 
 # ── Black ─────────────────────────────────────────────────────────────────────
 

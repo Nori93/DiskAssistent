@@ -1,7 +1,9 @@
 """
 Disk / filesystem API endpoints.
 """
+
 from fastapi import APIRouter, HTTPException
+
 from backend.services.scanner import get_available_disks, get_directory_tree
 
 router = APIRouter(prefix="/api/disks", tags=["Disks"])
