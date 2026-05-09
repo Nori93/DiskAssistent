@@ -90,6 +90,88 @@ Full interactive API docs available at [http://localhost:8000/docs](http://local
 
 ---
 
+## 🏗️ Architektura aplikacji
+
+```mermaid
+graph TB
+    subgraph Browser["🌐 Przeglądarka"]
+        direction TB
+        UI["index.html\nJinja2 Template"]
+        JS_APP["app.js\nGłówna logika"]
+        JS_API["api.js\nREST wrapper"]
+        JS_UI["ui.js\nKomponenty UI"]
+        UI --> JS_APP
+        JS_APP --> JS_API
+        JS_APP --> JS_UI
+    end
+
+    subgraph FastAPI["⚡ FastAPI (main.py)"]
+        direction TB
+        R_DISKS["routers/disks.py\n/api/disks/"]
+        R_SCAN["routers/scan.py\n/api/scan/"]
+        R_FILES["routers/files.py\n/api/files/"]
+        R_OPS["routers/operations.py\n/api/operations/"]
+        R_GROUPS["routers/groups.py\n/api/groups/"]
+    end
+
+    subgraph Services["🔧 Serwisy"]
+        direction TB
+        SVC_SCANNER["scanner.py\nSkanowanie FS"]
+        SVC_SCAN_SVC["scan_service.py\nWorker skanowania"]
+        SVC_GROUPER["grouper.py\nWykrywanie grup"]
+        SVC_RECATEGORIZE["recategorize_service.py\nWorker rekategoryzacji"]
+        SVC_FILE_OPS["file_ops.py\nOperacje na plikach"]
+        SVC_ICON["icon_service.py\nEkstrakcja ikon"]
+    end
+
+    subgraph AI["🤖 AI / Kategoryzacja"]
+        AI_RULES["Reguły + rozszerzenia"]
+        AI_ML["TF-IDF + LogisticRegression\n(scikit-learn)"]
+        AI_LLM["OpenAI / Ollama / LM Studio\n(opcjonalnie)"]
+        AI_RULES --> AI_ML --> AI_LLM
+    end
+
+    subgraph Data["🗄️ Dane"]
+        DB[("SQLite\ndiskassistent.db")]
+        FS["System plików\n(dyski lokalne)"]
+        THUMBS["static/img/thumbnails/\n(ikony PNG)"]
+    end
+
+    subgraph Background["⚙️ Wątki w tle"]
+        EXECUTOR["ThreadPoolExecutor\nmax_workers=1"]
+    end
+
+    JS_API -->|"HTTP REST"| FastAPI
+    R_SCAN --> SVC_SCAN_SVC
+    R_FILES --> SVC_RECATEGORIZE
+    R_FILES --> SVC_FILE_OPS
+    R_GROUPS --> SVC_GROUPER
+    R_DISKS --> SVC_SCANNER
+    R_OPS --> SVC_FILE_OPS
+
+    SVC_SCAN_SVC --> EXECUTOR
+    SVC_RECATEGORIZE --> EXECUTOR
+    SVC_SCAN_SVC --> SVC_SCANNER
+    SVC_SCAN_SVC --> SVC_GROUPER
+    SVC_SCAN_SVC --> SVC_ICON
+    SVC_RECATEGORIZE --> SVC_GROUPER
+
+    SVC_SCANNER --> AI
+    SVC_GROUPER --> AI
+
+    SVC_SCAN_SVC --> DB
+    SVC_RECATEGORIZE --> DB
+    SVC_FILE_OPS --> DB
+    R_FILES --> DB
+    R_GROUPS --> DB
+
+    SVC_SCANNER --> FS
+    SVC_FILE_OPS --> FS
+    SVC_ICON -->|"PowerShell .exe → PNG"| THUMBS
+```
+
+---
+
 ## Project Structure
 
 ```
