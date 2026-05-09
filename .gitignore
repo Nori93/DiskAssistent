@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Database
+database/diskassistent.db
+
+# Logs
+logs/*.log
+
+# Thumbnails (generated at runtime)
+frontend/static/img/thumbnails/*.png
+frontend/static/img/thumbnails/*.jpg
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
