@@ -219,7 +219,9 @@ DiskAssistent/
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for full text.
+
+If you use DiskAssistent in a commercial product or organisation, we'd love to hear about it — drop us a message at **[norbert.wieczorek.93@gmail.com](mailto:norbert.wieczorek.93@gmail.com)**. It's not required, just appreciated.
 
 ---
 
