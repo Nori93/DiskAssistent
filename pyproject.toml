@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "diskassistent"
+version = "1.0.0"
+description = "AI-powered file management web application"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.5",
+    "uvicorn[standard]==0.32.1",
+    "sqlalchemy==2.0.36",
+    "jinja2==3.1.4",
+    "python-multipart==0.0.12",
+    "aiofiles==24.1.0",
+    "scikit-learn==1.5.2",
+    "psutil==6.1.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai==1.55.3"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "ruff>=0.4",
+    "black>=24.0",
+]
+
+# ── Ruff ──────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]   # line length handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+# FastAPI uses Depends() in function defaults by design — suppress false positives
+"backend/routers/*.py" = ["B008"]
+
+# ── Black ─────────────────────────────────────────────────────────────────────
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

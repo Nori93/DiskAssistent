@@ -11,64 +11,168 @@ Strategy:
      share the same group root.
   4. Categorise each group root using its name + combined extensions.
 """
+
 from __future__ import annotations
 
+import contextlib
 import os
-import re
 from pathlib import Path
 
 from ai.categorizer import categorize_folder
-from backend.config import logger
 
 # ── Generic sub-folder names ──────────────────────────────────────────────────
 # Folders with these names are internal parts of a larger unit, NOT the unit
 # itself — so we bubble up past them when searching for the group root.
 _GENERIC = {
     # Binary / build outputs
-    "bin", "x64", "x86", "win32", "win64", "amd64", "arm64",
-    "debug", "release", "build", "dist", "out", "output",
+    "bin",
+    "x64",
+    "x86",
+    "win32",
+    "win64",
+    "amd64",
+    "arm64",
+    "debug",
+    "release",
+    "build",
+    "dist",
+    "out",
+    "output",
     # Code layout
-    "src", "source", "sources", "lib", "libs", "library",
-    "include", "includes", "headers", "obj",
+    "src",
+    "source",
+    "sources",
+    "lib",
+    "libs",
+    "library",
+    "include",
+    "includes",
+    "headers",
+    "obj",
     # Data / resources
-    "data", "assets", "asset", "res", "resources", "resource",
-    "content", "media", "config", "cfg", "settings", "conf",
+    "data",
+    "assets",
+    "asset",
+    "res",
+    "resources",
+    "resource",
+    "content",
+    "media",
+    "config",
+    "cfg",
+    "settings",
+    "conf",
     # Game internals
-    "scripts", "script", "mods", "mod", "addons", "addon",
-    "plugins", "plugin", "dlc", "patch", "patches",
-    "maps", "levels", "world", "worlds",
-    "textures", "texture", "shaders", "shader",
-    "audio", "sound", "sounds", "music", "sfx",
-    "video", "videos", "cutscenes", "movies",
-    "ui", "hud", "gui", "fonts", "font", "icons",
-    "saves", "save", "savegames", "savegame",
-    "logs", "log", "temp", "tmp", "cache",
+    "scripts",
+    "script",
+    "mods",
+    "mod",
+    "addons",
+    "addon",
+    "plugins",
+    "plugin",
+    "dlc",
+    "patch",
+    "patches",
+    "maps",
+    "levels",
+    "world",
+    "worlds",
+    "textures",
+    "texture",
+    "shaders",
+    "shader",
+    "audio",
+    "sound",
+    "sounds",
+    "music",
+    "sfx",
+    "video",
+    "videos",
+    "cutscenes",
+    "movies",
+    "ui",
+    "hud",
+    "gui",
+    "fonts",
+    "font",
+    "icons",
+    "saves",
+    "save",
+    "savegames",
+    "savegame",
+    "logs",
+    "log",
+    "temp",
+    "tmp",
+    "cache",
     # Language dirs
-    "en", "en-us", "de", "fr", "es", "ru", "zh", "ja", "pt",
-    "localization", "locales", "locale", "lang", "language",
+    "en",
+    "en-us",
+    "de",
+    "fr",
+    "es",
+    "ru",
+    "zh",
+    "ja",
+    "pt",
+    "localization",
+    "locales",
+    "locale",
+    "lang",
+    "language",
     # Steam / Epic / GOG internal layout
-    "steamapps", "common", "workshop",
-    "epic games", "gog games", "gog galaxy",
-    "steamlibrary", "steam library",
+    "steamapps",
+    "common",
+    "workshop",
+    "epic games",
+    "gog games",
+    "gog galaxy",
+    "steamlibrary",
+    "steam library",
     # Game/software library containers (hold many independent groups)
-    "games", "game", "library",
-    "program files", "program files (x86)",
+    "games",
+    "game",
+    "program files",
+    "program files (x86)",
     "downloads",
     # Additional game-internal asset folders
-    "meshes", "mesh", "animations", "animation",
-    "characters", "character", "effects", "effect",
-    "particles", "particle", "environments", "environment",
+    "meshes",
+    "mesh",
+    "animations",
+    "animation",
+    "characters",
+    "character",
+    "effects",
+    "effect",
+    "particles",
+    "particle",
+    "environments",
+    "environment",
     # Generic catch-alls
-    "misc", "other", "extras", "backup", "old", "new",
-    "docs", "doc", "documentation", "help",
-    "examples", "example", "samples", "sample",
-    "test", "tests",
+    "misc",
+    "other",
+    "extras",
+    "backup",
+    "old",
+    "new",
+    "docs",
+    "doc",
+    "documentation",
+    "help",
+    "examples",
+    "example",
+    "samples",
+    "sample",
+    "test",
+    "tests",
 }
 
 _MIN_FILES_FOR_GROUP = 2
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
+
 
 def detect_groups(root: str) -> list[dict]:
     """
@@ -79,7 +183,7 @@ def detect_groups(root: str) -> list[dict]:
         return []
 
     # Step 1 — collect all leaf dirs and their extensions
-    leaf_data: dict[str, set[str]] = {}   # path_str → set of extensions
+    leaf_data: dict[str, set[str]] = {}  # path_str → set of extensions
     _collect_leaves(root_path, root_path, leaf_data)
 
     if not leaf_data:
@@ -92,8 +196,7 @@ def detect_groups(root: str) -> list[dict]:
         leaf_str for leaf_str, exts in leaf_data.items() if ".exe" in exts
     )
     game_roots: frozenset[str] = frozenset(
-        str(_game_root_from_anchor(Path(a), root_path))
-        for a in exe_anchors
+        str(_game_root_from_anchor(Path(a), root_path)) for a in exe_anchors
     )
 
     # Step 2 — bubble up each leaf to its group root; merge extensions
@@ -108,26 +211,29 @@ def detect_groups(root: str) -> list[dict]:
     # Step 3 — build descriptors
     groups = []
     for root_str, exts in group_exts.items():
-        grp_path   = Path(root_str)
+        grp_path = Path(root_str)
         file_count = _count_files_recursive(grp_path)
         if file_count < _MIN_FILES_FOR_GROUP:
             continue
         total_size = _sum_size_recursive(grp_path)
-        category   = categorize_folder(grp_path, list(exts))
-        groups.append({
-            "name":        grp_path.name,
-            "root_path":   root_str,
-            "category":    category,
-            "file_count":  file_count,
-            "total_size":  total_size,
-            "extensions":  sorted(exts),
-            "description": _describe(grp_path.name, category, file_count),
-        })
+        category = categorize_folder(grp_path, list(exts))
+        groups.append(
+            {
+                "name": grp_path.name,
+                "root_path": root_str,
+                "category": category,
+                "file_count": file_count,
+                "total_size": total_size,
+                "extensions": sorted(exts),
+                "description": _describe(grp_path.name, category, file_count),
+            }
+        )
 
     return groups
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 def _collect_leaves(
     path: Path,
@@ -227,10 +333,8 @@ def _sum_size_recursive(path: Path) -> int:
     try:
         for dirpath, _, files in os.walk(path):
             for f in files:
-                try:
+                with contextlib.suppress(OSError):
                     total += (Path(dirpath) / f).stat().st_size
-                except OSError:
-                    pass
     except PermissionError:
         pass
     return total
@@ -238,18 +342,19 @@ def _sum_size_recursive(path: Path) -> int:
 
 def _describe(name: str, category: str, file_count: int) -> str:
     templates = {
-        "Games":     f"Game installation '{name}' with {file_count} files.",
-        "Movies":    f"Movie collection '{name}' containing {file_count} video files.",
-        "Music":     f"Music album/collection '{name}' with {file_count} tracks.",
+        "Games": f"Game installation '{name}' with {file_count} files.",
+        "Movies": f"Movie collection '{name}' containing {file_count} video files.",
+        "Music": f"Music album/collection '{name}' with {file_count} tracks.",
         "Documents": f"Document folder '{name}' with {file_count} files.",
-        "Images":    f"Image gallery '{name}' with {file_count} photos.",
-        "Software":  f"Software installation '{name}' with {file_count} files.",
-        "Other":     f"Folder '{name}' with {file_count} files.",
+        "Images": f"Image gallery '{name}' with {file_count} photos.",
+        "Software": f"Software installation '{name}' with {file_count} files.",
+        "Other": f"Folder '{name}' with {file_count} files.",
     }
     return templates.get(category, templates["Other"])
 
 
 # ── DB-only re-grouping ───────────────────────────────────────────────────────
+
 
 def regroup_from_db(db, root_path: str) -> list[dict]:
     """
@@ -257,14 +362,16 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
     database instead of walking the disk.  Safe to call after recategorize.
     """
     import os
+
     from sqlalchemy import func
+
     from database.models import FileRecord
 
     root = Path(root_path)
     sep = os.sep
     # Strip trailing separator to avoid double-separator in LIKE pattern.
     # e.g. "C:\" + "\" + "%" would produce "C:\\%" (double backslash) which
-    # never matches real paths like "C:\Users\...".  Stripping gives "C:\%". 
+    # never matches real paths like "C:\Users\...".  Stripping gives "C:\%".
     clean_root = root_path.rstrip(sep) or sep
     like_prefix = clean_root + sep + "%"
 
@@ -272,9 +379,9 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
     rows = (
         db.query(FileRecord.parent_dir, FileRecord.extension)
         .filter(
-            (FileRecord.parent_dir == root_path) |
-            (FileRecord.parent_dir == clean_root) |
-            FileRecord.parent_dir.like(like_prefix)
+            (FileRecord.parent_dir == root_path)
+            | (FileRecord.parent_dir == clean_root)
+            | FileRecord.parent_dir.like(like_prefix)
         )
         .all()
     )
@@ -294,9 +401,9 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
         db.query(FileRecord.parent_dir)
         .filter(
             FileRecord.extension == ".exe",
-            (FileRecord.parent_dir == root_path) |
-            (FileRecord.parent_dir == clean_root) |
-            FileRecord.parent_dir.like(like_prefix),
+            (FileRecord.parent_dir == root_path)
+            | (FileRecord.parent_dir == clean_root)
+            | FileRecord.parent_dir.like(like_prefix),
         )
         .distinct()
         .all()
@@ -306,8 +413,7 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
     # Propagate each exe-anchor up to its logical game/app root
     # (e.g. GAME\bin with game.exe -> GAME, not bin)
     game_roots: frozenset[str] = frozenset(
-        str(_game_root_from_anchor(Path(a), root))
-        for a in exe_anchors
+        str(_game_root_from_anchor(Path(a), root)) for a in exe_anchors
     )
 
     # 2 — bubble up each leaf to its group root
@@ -328,10 +434,7 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
 
         file_count = (
             db.query(func.count(FileRecord.id))
-            .filter(
-                (FileRecord.parent_dir == root_str) |
-                FileRecord.parent_dir.like(count_like)
-            )
+            .filter((FileRecord.parent_dir == root_str) | FileRecord.parent_dir.like(count_like))
             .scalar()
         ) or 0
 
@@ -340,22 +443,21 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
 
         total_size = (
             db.query(func.sum(FileRecord.size_bytes))
-            .filter(
-                (FileRecord.parent_dir == root_str) |
-                FileRecord.parent_dir.like(count_like)
-            )
+            .filter((FileRecord.parent_dir == root_str) | FileRecord.parent_dir.like(count_like))
             .scalar()
         ) or 0
 
         category = categorize_folder(grp_path, list(exts))
-        groups.append({
-            "name":        grp_path.name,
-            "root_path":   root_str,
-            "category":    category,
-            "file_count":  file_count,
-            "total_size":  total_size,
-            "extensions":  sorted(exts),
-            "description": _describe(grp_path.name, category, file_count),
-        })
+        groups.append(
+            {
+                "name": grp_path.name,
+                "root_path": root_str,
+                "category": category,
+                "file_count": file_count,
+                "total_size": total_size,
+                "extensions": sorted(exts),
+                "description": _describe(grp_path.name, category, file_count),
+            }
+        )
 
     return groups

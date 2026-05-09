@@ -28,8 +28,10 @@ frontend/static/img/thumbnails/*.jpg
 # Environment variables
 .env
 
-# VS Code
-.vscode/
+# VS Code — ignoruj wszystko oprócz konfiguracji projektu
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
 
 # macOS
 .DS_Store
