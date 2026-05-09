@@ -1,6 +1,7 @@
 """
 Scanning API endpoints.
 """
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -65,12 +66,7 @@ def scan_history():
     """Return the 50 most recent scan jobs, newest first."""
     db = SessionLocal()
     try:
-        jobs = (
-            db.query(ScanJob)
-            .order_by(ScanJob.id.desc())
-            .limit(50)
-            .all()
-        )
+        jobs = db.query(ScanJob).order_by(ScanJob.id.desc()).limit(50).all()
         return [j.to_dict() for j in jobs]
     finally:
         db.close()

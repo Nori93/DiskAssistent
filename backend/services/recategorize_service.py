@@ -2,6 +2,7 @@
 Background recategorize service.
 Runs categorization in a worker thread and tracks progress in RecategorizeJob.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -35,11 +36,19 @@ def start_recategorize(
     finally:
         db.close()
 
-    future = _executor.submit(_run_recategorize, job_id, only_auto, category, group_id, regroup, skip_categorize)
+    future = _executor.submit(
+        _run_recategorize, job_id, only_auto, category, group_id, regroup, skip_categorize
+    )
     with _lock:
         _active_jobs[job_id] = future
 
-    logger.info("Recategorize job %d submitted. scope=%s regroup=%s skip_cat=%s", job_id, scope, regroup, skip_categorize)
+    logger.info(
+        "Recategorize job %d submitted. scope=%s regroup=%s skip_cat=%s",
+        job_id,
+        scope,
+        regroup,
+        skip_categorize,
+    )
     return job_id
 
 
@@ -55,12 +64,7 @@ def get_recategorize_status(job_id: int) -> dict | None:
 def get_recategorize_history(limit: int = 50) -> list[dict]:
     db = SessionLocal()
     try:
-        jobs = (
-            db.query(RecategorizeJob)
-            .order_by(RecategorizeJob.id.desc())
-            .limit(limit)
-            .all()
-        )
+        jobs = db.query(RecategorizeJob).order_by(RecategorizeJob.id.desc()).limit(limit).all()
         return [j.to_dict() for j in jobs]
     finally:
         db.close()
@@ -88,6 +92,7 @@ def _run_recategorize(
         # ── Phase 1: recategorize (skipped in regroup-only mode) ───────
         if not skip_categorize:
             from ai.categorizer import categorize
+
             q = db.query(FileRecord)
             if only_auto:
                 q = q.filter(FileRecord.category_overridden == False)  # noqa: E712
@@ -164,11 +169,7 @@ def _regroup_phase(db, job_id: int) -> None:
 
     # Collect scan roots from completed (or partially-complete) scan jobs
     scan_roots: list[str] = []
-    done_jobs = (
-        db.query(ScanJob)
-        .filter(ScanJob.status.in_(["done", "error"]))
-        .all()
-    )
+    done_jobs = db.query(ScanJob).filter(ScanJob.status.in_(["done", "error"])).all()
     seen: set[str] = set()
     for sj in done_jobs:
         for rp in sj.root_path.split(";"):
@@ -205,27 +206,29 @@ def _regroup_phase(db, job_id: int) -> None:
         try:
             groups_data = regroup_from_db(db, root_path)
         except Exception as exc:
-            logger.warning("[RecatJob %d] regroup_from_db failed for %s: %s", job_id, root_path, exc)
+            logger.warning(
+                "[RecatJob %d] regroup_from_db failed for %s: %s", job_id, root_path, exc
+            )
             continue
 
         sep = os.sep
         for gd in groups_data:
             grp = FileGroup(
-                name        = gd["name"],
-                root_path   = gd["root_path"],
-                category    = gd["category"],
-                description = gd["description"],
+                name=gd["name"],
+                root_path=gd["root_path"],
+                category=gd["category"],
+                description=gd["description"],
             )
             db.add(grp)
             db.flush()
 
-            grp_root    = gd["root_path"]
-            clean_grp   = grp_root.rstrip(sep) or sep
+            grp_root = gd["root_path"]
+            clean_grp = grp_root.rstrip(sep) or sep
             like_prefix = clean_grp + sep + "%"
             db.query(FileRecord).filter(
-                (FileRecord.parent_dir == grp_root) |
-                (FileRecord.parent_dir == clean_grp) |
-                FileRecord.parent_dir.like(like_prefix)
+                (FileRecord.parent_dir == grp_root)
+                | (FileRecord.parent_dir == clean_grp)
+                | FileRecord.parent_dir.like(like_prefix)
             ).update({"group_id": grp.id}, synchronize_session=False)
             total_groups += 1
 
@@ -237,11 +240,11 @@ def _regroup_phase(db, job_id: int) -> None:
 def _dedupe_roots(paths: list[str]) -> list[str]:
     """Keep only the topmost paths — remove any path that is a sub-path of another."""
     import os
+
     paths = sorted(paths, key=len)
     result: list[str] = []
     for p in paths:
         p_norm = p.rstrip(os.sep) + os.sep
-        if not any(p_norm.startswith(r.rstrip(os.sep) + os.sep) and p != r
-                   for r in result):
+        if not any(p_norm.startswith(r.rstrip(os.sep) + os.sep) and p != r for r in result):
             result.append(p)
     return result

@@ -2,6 +2,7 @@
 Background scanning service that runs in a thread pool.
 Handles long-running scans without blocking the API.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -37,10 +38,10 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
     stmt = stmt.on_conflict_do_update(
         index_elements=["full_path"],
         set_={
-            "size_bytes":  stmt.excluded.size_bytes,
+            "size_bytes": stmt.excluded.size_bytes,
             "modified_at": stmt.excluded.modified_at,
-            "scanned_at":  stmt.excluded.scanned_at,
-            "is_missing":  False,
+            "scanned_at": stmt.excluded.scanned_at,
+            "is_missing": False,
             "ai_category": sa_case(
                 (FileRecord.__table__.c.category_overridden.is_(False), stmt.excluded.ai_category),
                 else_=FileRecord.__table__.c.ai_category,
@@ -52,7 +53,7 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
         },
     )
 
-    max_attempts = 120   # 120 × 0.5 s = 60 s of retry headroom
+    max_attempts = 120  # 120 × 0.5 s = 60 s of retry headroom
     for attempt in range(max_attempts):
         try:
             db.execute(stmt)
@@ -62,7 +63,8 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
             if ("locked" in err or "busy" in err) and attempt < max_attempts - 1:
                 logger.debug(
                     "_upsert_file_batch: DB locked (attempt %d/%d), retrying in 0.5 s…",
-                    attempt + 1, max_attempts,
+                    attempt + 1,
+                    max_attempts,
                 )
                 with contextlib.suppress(Exception):
                     db.rollback()
@@ -129,20 +131,16 @@ def resume_interrupted_scans() -> None:
     """
     db = SessionLocal()
     try:
-        stale = (
-            db.query(ScanJob)
-            .filter(ScanJob.status.in_(["running", "pending"]))
-            .all()
-        )
+        stale = db.query(ScanJob).filter(ScanJob.status.in_(["running", "pending"])).all()
         if not stale:
             return
         for job in stale:
             # Reset progress counters so the re-run starts clean
-            job.status      = "pending"
-            job.processed   = 0
+            job.status = "pending"
+            job.processed = 0
             job.total_files = 0
-            job.error_msg   = ""
-            job.current_disk  = ""
+            job.error_msg = ""
+            job.current_disk = ""
             job.disk_progress = "{}"
         db.commit()
 
@@ -202,6 +200,7 @@ def start_rescan_all() -> int:
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
+
 def _run_scan(job_id: int, root_path: str):
     """Run in worker thread."""
     db = SessionLocal()
@@ -209,7 +208,7 @@ def _run_scan(job_id: int, root_path: str):
         job = db.get(ScanJob, job_id)
         if not job:
             return
-        job.status     = "running"
+        job.status = "running"
         job.started_at = datetime.datetime.utcnow()
         db.commit()
 
@@ -227,30 +226,28 @@ def _run_scan(job_id: int, root_path: str):
             fp = file_meta["full_path"]
 
             # Upsert: update if existing, insert if new
-            existing = db.query(FileRecord).filter(
-                FileRecord.full_path == fp
-            ).first()
+            existing = db.query(FileRecord).filter(FileRecord.full_path == fp).first()
 
-            cat = str(categorize(fp))   # coerce np.str_ → str
+            cat = str(categorize(fp))  # coerce np.str_ → str
 
             if existing:
-                existing.size_bytes   = file_meta["size_bytes"]
-                existing.modified_at  = file_meta["modified_at"]
-                existing.is_missing   = False
+                existing.size_bytes = file_meta["size_bytes"]
+                existing.modified_at = file_meta["modified_at"]
+                existing.is_missing = False
                 if not existing.category_overridden:
                     existing.ai_category = cat
-                    existing.category    = cat
+                    existing.category = cat
             else:
                 rec = FileRecord(
-                    name        = file_meta["name"],
-                    full_path   = fp,
-                    parent_dir  = file_meta["parent_dir"],
-                    extension   = file_meta["extension"],
-                    size_bytes  = file_meta["size_bytes"],
-                    created_at  = file_meta["created_at"],
-                    modified_at = file_meta["modified_at"],
-                    ai_category = cat,
-                    category    = cat,
+                    name=file_meta["name"],
+                    full_path=fp,
+                    parent_dir=file_meta["parent_dir"],
+                    extension=file_meta["extension"],
+                    size_bytes=file_meta["size_bytes"],
+                    created_at=file_meta["created_at"],
+                    modified_at=file_meta["modified_at"],
+                    ai_category=cat,
+                    category=cat,
                 )
                 db.add(rec)
 
@@ -271,7 +268,7 @@ def _run_scan(job_id: int, root_path: str):
         # --- Phase 4: mark missing files ---
         _mark_missing(db, root_path)
 
-        job.status      = "done"
+        job.status = "done"
         job.finished_at = datetime.datetime.utcnow()
         db.commit()
         logger.info("[Job %d] Scan complete. %d files indexed.", job_id, processed)
@@ -280,7 +277,7 @@ def _run_scan(job_id: int, root_path: str):
         logger.exception("[Job %d] Scan failed: %s", job_id, exc)
         job = db.get(ScanJob, job_id)
         if job:
-            job.status    = "error"
+            job.status = "error"
             job.error_msg = str(exc)
             db.commit()
     finally:
@@ -302,7 +299,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
         job = db.get(ScanJob, job_id)
         if not job:
             return
-        job.status     = "running"
+        job.status = "running"
         job.started_at = datetime.datetime.utcnow()
         db.commit()
 
@@ -327,8 +324,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
 
         # Initialise per-disk progress map
         dp: dict[str, dict] = {
-            d: {"total": disk_totals[d], "processed": 0, "status": "pending"}
-            for d in disks
+            d: {"total": disk_totals[d], "processed": 0, "status": "pending"} for d in disks
         }
         job.disk_progress = json.dumps(dp)
         db.commit()
@@ -343,7 +339,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
             db.commit()
 
             disk_processed = 0
-            seen_paths:  set[str]  = set()   # guard against duplicate paths (junctions, symlinks)
+            seen_paths: set[str] = set()  # guard against duplicate paths (junctions, symlinks)
             batch_values: list[dict] = []
             try:
                 for file_meta in scan_directory(disk):
@@ -351,27 +347,29 @@ def _run_rescan_all(job_id: int, disks: list[str]):
                     if fp in seen_paths:
                         continue
                     seen_paths.add(fp)
-                    cat = str(categorize(fp))   # coerce np.str_ → str
+                    cat = str(categorize(fp))  # coerce np.str_ → str
 
-                    batch_values.append({
-                        "name":               file_meta["name"],
-                        "full_path":          fp,
-                        "parent_dir":         file_meta["parent_dir"],
-                        "extension":          file_meta["extension"],
-                        "size_bytes":         file_meta["size_bytes"],
-                        "created_at":         file_meta["created_at"],
-                        "modified_at":        file_meta["modified_at"],
-                        "scanned_at":         datetime.datetime.utcnow(),
-                        "ai_category":        cat,
-                        "category":           cat,
-                        "category_overridden": False,
-                        "tags":               "",
-                        "description":        "",
-                        "thumbnail_path":     "",
-                        "group_id":           None,
-                        "is_missing":         False,
-                    })
-                    processed      += 1
+                    batch_values.append(
+                        {
+                            "name": file_meta["name"],
+                            "full_path": fp,
+                            "parent_dir": file_meta["parent_dir"],
+                            "extension": file_meta["extension"],
+                            "size_bytes": file_meta["size_bytes"],
+                            "created_at": file_meta["created_at"],
+                            "modified_at": file_meta["modified_at"],
+                            "scanned_at": datetime.datetime.utcnow(),
+                            "ai_category": cat,
+                            "category": cat,
+                            "category_overridden": False,
+                            "tags": "",
+                            "description": "",
+                            "thumbnail_path": "",
+                            "group_id": None,
+                            "is_missing": False,
+                        }
+                    )
+                    processed += 1
                     disk_processed += 1
 
                     if len(batch_values) >= 100:
@@ -382,7 +380,9 @@ def _run_rescan_all(job_id: int, disks: list[str]):
                             job.disk_progress = json.dumps(dp)
                             db.commit()
                         except Exception as commit_exc:
-                            logger.warning("[Job %d] Batch upsert error, rolling back: %s", job_id, commit_exc)
+                            logger.warning(
+                                "[Job %d] Batch upsert error, rolling back: %s", job_id, commit_exc
+                            )
                             db.rollback()
                         batch_values.clear()
 
@@ -391,7 +391,11 @@ def _run_rescan_all(job_id: int, disks: list[str]):
                         _upsert_file_batch(db, batch_values)
                         db.commit()
                     except Exception as commit_exc:
-                        logger.warning("[Job %d] Final batch upsert error, rolling back: %s", job_id, commit_exc)
+                        logger.warning(
+                            "[Job %d] Final batch upsert error, rolling back: %s",
+                            job_id,
+                            commit_exc,
+                        )
                         db.rollback()
                     batch_values.clear()
 
@@ -403,7 +407,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
                 dp[disk]["status"] = "done"
 
             dp[disk]["processed"] = disk_processed
-            job.processed     = processed
+            job.processed = processed
             job.disk_progress = json.dumps(dp)
             db.commit()
 
@@ -419,7 +423,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
             except Exception as exc:
                 logger.warning("[Job %d] Group detection failed for %s: %s", job_id, disk, exc)
 
-        job.status      = "done"
+        job.status = "done"
         job.current_disk = ""
         job.finished_at = datetime.datetime.utcnow()
         db.commit()
@@ -436,7 +440,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
         logger.exception("[Job %d] Rescan-all failed: %s", job_id, exc)
         job = db.get(ScanJob, job_id)
         if job:
-            job.status    = "error"
+            job.status = "error"
             job.error_msg = str(exc)
             db.commit()
     finally:
@@ -461,33 +465,31 @@ def _index_groups(db, root_path: str, extract_icons: bool = True):
     logger.info("_index_groups: %d groups found for %s", len(groups_data), root_path)
 
     for gd in groups_data:
-        existing = db.query(FileGroup).filter(
-            FileGroup.root_path == gd["root_path"]
-        ).first()
+        existing = db.query(FileGroup).filter(FileGroup.root_path == gd["root_path"]).first()
         if not existing:
             grp = FileGroup(
-                name        = gd["name"],
-                root_path   = gd["root_path"],
-                category    = gd["category"],
-                description = gd["description"],
+                name=gd["name"],
+                root_path=gd["root_path"],
+                category=gd["category"],
+                description=gd["description"],
             )
             db.add(grp)
-            db.flush()   # get grp.id
+            db.flush()  # get grp.id
         else:
             grp = existing
-            existing.category       = gd["category"]
-            existing.description    = gd["description"]
+            existing.category = gd["category"]
+            existing.description = gd["description"]
             existing.file_tree_json = None  # invalidate cached tree
 
         # Tag ALL files recursively under this group root
-        grp_root    = gd["root_path"]
-        sep         = os.sep
-        clean_grp   = grp_root.rstrip(sep) or sep
+        grp_root = gd["root_path"]
+        sep = os.sep
+        clean_grp = grp_root.rstrip(sep) or sep
         like_prefix = clean_grp + sep + "%"
         db.query(FileRecord).filter(
-            (FileRecord.parent_dir == grp_root) |
-            (FileRecord.parent_dir == clean_grp) |
-            FileRecord.parent_dir.like(like_prefix)
+            (FileRecord.parent_dir == grp_root)
+            | (FileRecord.parent_dir == clean_grp)
+            | FileRecord.parent_dir.like(like_prefix)
         ).update({"group_id": grp.id}, synchronize_session=False)
 
         # Extract exe icon if this is a Games group and we don't have one yet
@@ -508,11 +510,15 @@ def _extract_icons_for_disk(db, root_path: str):
     """
     from backend.services.icon_service import extract_group_icon, pick_best_exe
 
-    groups = db.query(FileGroup).filter(
-        FileGroup.category == "Games",
-        FileGroup.root_path.like(root_path.rstrip("\\\"/") + "%"),
-        FileGroup.thumbnail_path.is_(None) | (FileGroup.thumbnail_path == ""),
-    ).all()
+    groups = (
+        db.query(FileGroup)
+        .filter(
+            FileGroup.category == "Games",
+            FileGroup.root_path.like(root_path.rstrip('\\"/') + "%"),
+            FileGroup.thumbnail_path.is_(None) | (FileGroup.thumbnail_path == ""),
+        )
+        .all()
+    )
     for grp in groups:
         try:
             exe = pick_best_exe(db, grp.id, grp.root_path)
@@ -530,14 +536,19 @@ def _mark_missing(db, root_path: str):
     Mark FileRecords under root_path as missing if the file is gone from disk.
     """
     import os
+
     sep = os.sep
     clean_root = root_path.rstrip(sep) or sep
     like_prefix = clean_root + sep + "%"
-    records = db.query(FileRecord).filter(
-        (FileRecord.parent_dir == root_path) |
-        (FileRecord.parent_dir == clean_root) |
-        FileRecord.parent_dir.like(like_prefix)
-    ).all()
+    records = (
+        db.query(FileRecord)
+        .filter(
+            (FileRecord.parent_dir == root_path)
+            | (FileRecord.parent_dir == clean_root)
+            | FileRecord.parent_dir.like(like_prefix)
+        )
+        .all()
+    )
     for rec in records:
         if not Path(rec.full_path).exists():
             rec.is_missing = True

@@ -10,6 +10,7 @@ Strategy (Windows-only):
 On non-Windows or if extraction fails the function returns None silently so
 the caller can fall back to the emoji icon.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -62,10 +63,14 @@ def extract_group_icon(group_id: int, exe_path: str) -> str | None:
                 "powershell.exe",
                 "-NonInteractive",
                 "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
-                "-File", str(ps1_path),
-                "-exe",  exe_path,
-                "-out",  str(out_path),
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(ps1_path),
+                "-exe",
+                exe_path,
+                "-out",
+                str(out_path),
             ],
             capture_output=True,
             timeout=15,
@@ -74,7 +79,8 @@ def extract_group_icon(group_id: int, exe_path: str) -> str | None:
         if result.returncode != 0:
             logger.debug(
                 "icon_service: PS extraction failed for group %d (%s): %s",
-                group_id, exe_path,
+                group_id,
+                exe_path,
                 result.stderr.decode(errors="replace").strip(),
             )
             return None
@@ -109,8 +115,8 @@ def pick_best_exe(db, group_id: int, root_path: str) -> str | None:
     from database.models import FileRecord
 
     folder_name = Path(root_path).name.lower()
-    sep         = os.sep
-    clean_root  = root_path.rstrip(sep)
+    sep = os.sep
+    clean_root = root_path.rstrip(sep)
 
     all_exes = (
         db.query(FileRecord)
@@ -135,7 +141,8 @@ def pick_best_exe(db, group_id: int, root_path: str) -> str | None:
         stem = Path(f.full_path).stem.lower()
         # Strip common suffixes that reduce similarity: -win64, _release, _launcher…
         import re
-        stem_clean = re.sub(r'[-_](win64|win32|x64|x86|release|debug|launcher|game|app)$', '', stem)
+
+        stem_clean = re.sub(r"[-_](win64|win32|x64|x86|release|debug|launcher|game|app)$", "", stem)
         return difflib.SequenceMatcher(None, folder_name, stem_clean).ratio()
 
     best = max(all_exes, key=_similarity)
@@ -143,12 +150,9 @@ def pick_best_exe(db, group_id: int, root_path: str) -> str | None:
         return best.full_path
 
     # 3. Root-level, largest
-    root_exes = [
-        f for f in all_exes
-        if f.parent_dir.rstrip(sep).lower() == clean_root.lower()
-    ]
+    root_exes = [f for f in all_exes if f.parent_dir.rstrip(sep).lower() == clean_root.lower()]
     if root_exes:
-        return root_exes[0].full_path    # already sorted desc by size
+        return root_exes[0].full_path  # already sorted desc by size
 
     # 4. Any exe, largest
     return all_exes[0].full_path

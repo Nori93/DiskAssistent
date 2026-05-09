@@ -1,6 +1,7 @@
 """
 DiskAssistent — main FastAPI application entry point.
 """
+
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,12 +21,15 @@ from database.models import init_db
 # ── Database init ─────────────────────────────────────────────────────────────
 init_db()
 
+
 # ── Lifespan: resume any interrupted scan jobs on startup ─────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from backend.services.scan_service import resume_interrupted_scans
+
     resume_interrupted_scans()
     yield
+
 
 # ── App factory ───────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -64,10 +68,10 @@ app.include_router(groups.router)
 
 # ── Frontend route ────────────────────────────────────────────────────────────
 
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request,
-                                                      "title": APP_TITLE})
+    return templates.TemplateResponse("index.html", {"request": request, "title": APP_TITLE})
 
 
 @app.get("/health")

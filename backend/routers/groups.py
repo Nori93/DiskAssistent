@@ -1,6 +1,7 @@
 """
 File groups API endpoints.
 """
+
 import json
 import os
 
@@ -65,8 +66,7 @@ def get_group(group_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Group not found.")
     d = grp.to_dict()
     d["files"] = [
-        f.to_dict()
-        for f in db.query(FileRecord).filter(FileRecord.group_id == group_id).all()
+        f.to_dict() for f in db.query(FileRecord).filter(FileRecord.group_id == group_id).all()
     ]
     return d
 
@@ -91,8 +91,8 @@ def get_group_tree(group_id: int, db: Session = Depends(get_db)):
 
 def _build_group_tree(db, grp: FileGroup) -> dict:
     """Build a nested directory tree from a group's file records."""
-    sep        = os.sep
-    root_path  = grp.root_path.rstrip(sep)
+    sep = os.sep
+    root_path = grp.root_path.rstrip(sep)
     root_lower = root_path.lower()
 
     files = (
@@ -103,15 +103,15 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
     )
 
     root_node: dict = {
-        "name":     os.path.basename(root_path) or root_path,
-        "path":     root_path,
+        "name": os.path.basename(root_path) or root_path,
+        "path": root_path,
         "children": {},
-        "files":    [],
+        "files": [],
     }
 
     for f in files:
         rel = f.full_path
-        rel = rel[len(root_path):].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
+        rel = rel[len(root_path) :].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
 
         # Split into folder parts (drop the filename at the end)
         parts = rel.replace("\\", "/").split("/")
@@ -123,10 +123,10 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
                 continue
             if part not in node["children"]:
                 node["children"][part] = {
-                    "name":     part,
-                    "path":     node["path"] + sep + part,
+                    "name": part,
+                    "path": node["path"] + sep + part,
                     "children": {},
-                    "files":    [],
+                    "files": [],
                 }
             node = node["children"][part]
 
@@ -136,7 +136,7 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
 
 
 class UpdateGroupBody(BaseModel):
-    category:    str | None = None
+    category: str | None = None
     description: str | None = None
 
 

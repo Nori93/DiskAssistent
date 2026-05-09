@@ -1,6 +1,7 @@
 """
 File operations API endpoints — move, rename, delete.
 """
+
 from __future__ import annotations
 
 import os
@@ -23,18 +24,18 @@ router = APIRouter(prefix="/api/operations", tags=["Operations"])
 
 
 class MoveBody(BaseModel):
-    file_id:  int
+    file_id: int
     dest_dir: str
 
 
 class RenameBody(BaseModel):
-    file_id:  int
+    file_id: int
     new_name: str
 
 
 class DeleteBody(BaseModel):
     file_id: int
-    confirm: bool = False     # client must explicitly send confirm=true
+    confirm: bool = False  # client must explicitly send confirm=true
 
 
 class OpenFolderBody(BaseModel):
@@ -46,7 +47,7 @@ def open_folder(body: OpenFolderBody):
     """Open a folder in the native file manager (Windows Explorer, Nautilus, Finder).
     If the path is a file, open its parent directory.
     """
-    path = body.path.strip().rstrip("\\/")   # strip trailing separators
+    path = body.path.strip().rstrip("\\/")  # strip trailing separators
 
     # If it looks like a file, open the parent directory
     if os.path.isfile(path):
@@ -76,10 +77,11 @@ def move(body: MoveBody, db: Session = Depends(get_db)):
 
     # Update DB record
     from pathlib import Path
+
     new_p = Path(new_path)
-    rec.full_path  = new_path
+    rec.full_path = new_path
     rec.parent_dir = str(new_p.parent)
-    rec.name       = new_p.name
+    rec.name = new_p.name
     db.commit()
     db.refresh(rec)
     return {"message": "File moved.", "file": rec.to_dict()}
@@ -94,10 +96,11 @@ def rename(body: RenameBody, db: Session = Depends(get_db)):
         raise HTTPException(400, str(exc)) from exc
 
     from pathlib import Path
+
     new_p = Path(new_path)
-    rec.full_path  = new_path
-    rec.name       = new_p.name
-    rec.extension  = new_p.suffix.lower()
+    rec.full_path = new_path
+    rec.name = new_p.name
+    rec.extension = new_p.suffix.lower()
     db.commit()
     db.refresh(rec)
     return {"message": "File renamed.", "file": rec.to_dict()}
@@ -119,6 +122,7 @@ def delete(body: DeleteBody, db: Session = Depends(get_db)):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _get_or_404(db: Session, file_id: int) -> FileRecord:
     rec = db.get(FileRecord, file_id)
