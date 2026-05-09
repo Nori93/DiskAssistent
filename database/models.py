@@ -4,13 +4,20 @@ Database models and ORM layer using SQLAlchemy + SQLite.
 from __future__ import annotations
 
 import datetime
-from typing import Optional
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Float, Integer, String, Text,
-    create_engine, event, text,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    event,
+    text,
 )
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import NullPool
 
 from backend.config import DB_PATH, logger
@@ -219,7 +226,7 @@ class RecategorizeJob(Base):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _fmt_dt(dt: Optional[datetime.datetime]) -> Optional[str]:
+def _fmt_dt(dt: datetime.datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 

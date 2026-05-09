@@ -4,7 +4,12 @@ Scanning API endpoints.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backend.services.scan_service import start_scan, get_job_status, get_active_scan, start_rescan_all
+from backend.services.scan_service import (
+    get_active_scan,
+    get_job_status,
+    start_rescan_all,
+    start_scan,
+)
 from database.models import ScanJob, SessionLocal
 
 router = APIRouter(prefix="/api/scan", tags=["Scanning"])
@@ -32,7 +37,7 @@ def rescan_all_endpoint():
     try:
         job_id = start_rescan_all()
     except ValueError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
     return {"job_id": job_id, "message": "Rescan of all disks started."}
 
 

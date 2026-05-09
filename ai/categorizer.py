@@ -10,15 +10,18 @@ The module exposes a single `categorize(file_path)` function.
 """
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
-from typing import Optional
 
 from backend.config import (
-    AUDIO_EXTENSIONS, DOC_EXTENSIONS,
-    IMAGE_EXTENSIONS, VIDEO_EXTENSIONS,
-    OPENAI_API_KEY, AI_BASE_URL, AI_MODEL, logger,
+    AI_BASE_URL,
+    AI_MODEL,
+    AUDIO_EXTENSIONS,
+    DOC_EXTENSIONS,
+    IMAGE_EXTENSIONS,
+    OPENAI_API_KEY,
+    VIDEO_EXTENSIONS,
+    logger,
 )
 
 # ── Category constants ────────────────────────────────────────────────────────
@@ -114,7 +117,7 @@ def _build_classifier():
         ("data file archive zip rar 7z", "Other"),
     ]
 
-    texts, labels = zip(*training)
+    texts, labels = zip(*training, strict=False)
     pipeline = Pipeline([
         ("tfidf", TfidfVectorizer(ngram_range=(1, 2))),
         ("clf",   LogisticRegression(max_iter=1000)),
@@ -123,7 +126,7 @@ def _build_classifier():
     return pipeline
 
 
-def _ml_categorize(path: Path) -> Optional[str]:
+def _ml_categorize(path: Path) -> str | None:
     """Use the sklearn classifier as a secondary signal."""
     global _clf
     if _clf is None:
@@ -140,7 +143,7 @@ def _ml_categorize(path: Path) -> Optional[str]:
 
 # ── OpenAI fallback ───────────────────────────────────────────────────────────
 
-def _openai_categorize(path: Path) -> Optional[str]:
+def _openai_categorize(path: Path) -> str | None:
     """
     Categorize using an OpenAI-compatible chat API.
 
@@ -260,19 +263,15 @@ def _is_game_folder(folder_path: Path, ext_set: set[str]) -> bool:
     game_assets = ext_set & _GAME_ASSET_EXTENSIONS
 
     # Strong keyword signal in path → Game
-    if _GAME_FOLDER_PATTERNS.search(folder_text):
-        if has_exe or has_iso:
-            return True
+    if _GAME_FOLDER_PATTERNS.search(folder_text) and (has_exe or has_iso):
+        return True
 
     # Exe + multiple game-asset types → very likely a game
     if has_exe and len(game_assets) >= 2:
         return True
 
     # ISO/disc image without video files → likely a game disc
-    if has_iso and not (ext_set & VIDEO_EXTENSIONS):
-        return True
-
-    return False
+    return bool(has_iso and not ext_set & VIDEO_EXTENSIONS)
 
 
 def categorize_folder(folder_path: str | Path, file_extensions: list[str]) -> str:

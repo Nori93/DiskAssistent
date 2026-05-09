@@ -53,7 +53,8 @@ app.mount(
 templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
 
 # ── API routers ───────────────────────────────────────────────────────────────
-from backend.routers import disks, scan, files, operations, groups
+# init_db() must run before routers are imported — E402 is intentional here
+from backend.routers import disks, files, groups, operations, scan  # noqa: E402
 
 app.include_router(disks.router)
 app.include_router(scan.router)

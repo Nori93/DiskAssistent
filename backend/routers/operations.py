@@ -12,7 +12,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.services.file_ops import (
-    FileOperationError, delete_file, move_file, rename_file,
+    FileOperationError,
+    delete_file,
+    move_file,
+    rename_file,
 )
 from database.models import FileRecord, get_db
 
@@ -58,7 +61,7 @@ def open_folder(body: OpenFolderBody):
         else:
             subprocess.Popen(["xdg-open", path])
     except Exception as exc:
-        raise HTTPException(500, f"Could not open folder: {exc}")
+        raise HTTPException(500, f"Could not open folder: {exc}") from exc
 
     return {"opened": path}
 
@@ -69,7 +72,7 @@ def move(body: MoveBody, db: Session = Depends(get_db)):
     try:
         new_path = move_file(rec.full_path, body.dest_dir)
     except FileOperationError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
 
     # Update DB record
     from pathlib import Path
@@ -88,7 +91,7 @@ def rename(body: RenameBody, db: Session = Depends(get_db)):
     try:
         new_path = rename_file(rec.full_path, body.new_name)
     except FileOperationError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
 
     from pathlib import Path
     new_p = Path(new_path)
@@ -108,7 +111,7 @@ def delete(body: DeleteBody, db: Session = Depends(get_db)):
     try:
         delete_file(rec.full_path)
     except FileOperationError as exc:
-        raise HTTPException(400, str(exc))
+        raise HTTPException(400, str(exc)) from exc
 
     db.delete(rec)
     db.commit()

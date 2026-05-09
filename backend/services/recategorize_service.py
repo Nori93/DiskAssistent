@@ -7,7 +7,6 @@ from __future__ import annotations
 import datetime
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
 
 from backend.config import logger
 from database.models import FileRecord, RecategorizeJob, SessionLocal
@@ -20,8 +19,8 @@ _lock = threading.Lock()
 def start_recategorize(
     scope: str,
     only_auto: bool,
-    category: Optional[str],
-    group_id: Optional[int],
+    category: str | None,
+    group_id: int | None,
     regroup: bool = True,
     skip_categorize: bool = False,
 ) -> int:
@@ -44,7 +43,7 @@ def start_recategorize(
     return job_id
 
 
-def get_recategorize_status(job_id: int) -> Optional[dict]:
+def get_recategorize_status(job_id: int) -> dict | None:
     db = SessionLocal()
     try:
         job = db.get(RecategorizeJob, job_id)
@@ -70,8 +69,8 @@ def get_recategorize_history(limit: int = 50) -> list[dict]:
 def _run_recategorize(
     job_id: int,
     only_auto: bool,
-    category: Optional[str],
-    group_id: Optional[int],
+    category: str | None,
+    group_id: int | None,
     regroup: bool = True,
     skip_categorize: bool = False,
 ):
@@ -158,9 +157,10 @@ def _regroup_phase(db, job_id: int) -> None:
     Rebuild all FileGroup records and update FileRecord.group_id
     entirely from the database — no disk scanning.
     """
-    from database.models import FileGroup, ScanJob
-    from backend.services.grouper import regroup_from_db
     import os
+
+    from backend.services.grouper import regroup_from_db
+    from database.models import FileGroup, ScanJob
 
     # Collect scan roots from completed (or partially-complete) scan jobs
     scan_roots: list[str] = []

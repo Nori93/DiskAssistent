@@ -3,8 +3,9 @@
 run.py — convenience launcher for DiskAssistent.
 Usage:  python run.py
 """
-import sys
 import subprocess
+import sys
+
 
 def main():
     subprocess.run(

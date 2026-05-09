@@ -4,17 +4,16 @@ Handles long-running scans without blocking the API.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional
 
 from ai.categorizer import categorize
 from backend.config import logger
-from database.models import FileRecord, FileGroup, ScanJob, SessionLocal
 from backend.services.scanner import scan_directory
-from backend.services.grouper import detect_groups
+from database.models import FileGroup, FileRecord, ScanJob, SessionLocal
 
 # Single-worker executor so scans are serialized and don't overload disk I/O
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="scanner")
@@ -30,8 +29,9 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
     Retries on SQLITE_BUSY / SQLITE_LOCKED for up to ~60 seconds.
     """
     import time
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
     from sqlalchemy import case as sa_case
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
     stmt = sqlite_insert(FileRecord.__table__).values(values)
     stmt = stmt.on_conflict_do_update(
@@ -42,11 +42,11 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
             "scanned_at":  stmt.excluded.scanned_at,
             "is_missing":  False,
             "ai_category": sa_case(
-                (FileRecord.__table__.c.category_overridden == False, stmt.excluded.ai_category),
+                (FileRecord.__table__.c.category_overridden.is_(False), stmt.excluded.ai_category),
                 else_=FileRecord.__table__.c.ai_category,
             ),
             "category": sa_case(
-                (FileRecord.__table__.c.category_overridden == False, stmt.excluded.category),
+                (FileRecord.__table__.c.category_overridden.is_(False), stmt.excluded.category),
                 else_=FileRecord.__table__.c.category,
             ),
         },
@@ -64,10 +64,8 @@ def _upsert_file_batch(db, values: list[dict]) -> None:
                     "_upsert_file_batch: DB locked (attempt %d/%d), retrying in 0.5 s…",
                     attempt + 1, max_attempts,
                 )
-                try:
+                with contextlib.suppress(Exception):
                     db.rollback()
-                except Exception:
-                    pass
                 time.sleep(0.5)
                 continue
             raise
@@ -96,7 +94,7 @@ def start_scan(root_path: str) -> int:
     return job_id
 
 
-def get_job_status(job_id: int) -> Optional[dict]:
+def get_job_status(job_id: int) -> dict | None:
     db = SessionLocal()
     try:
         job = db.get(ScanJob, job_id)
@@ -105,7 +103,7 @@ def get_job_status(job_id: int) -> Optional[dict]:
         db.close()
 
 
-def get_active_scan() -> Optional[dict]:
+def get_active_scan() -> dict | None:
     """
     Return the most recent job that is still running or pending, or None.
     Used by the frontend on page load to reconnect to an in-progress scan.
@@ -455,6 +453,7 @@ def _index_groups(db, root_path: str, extract_icons: bool = True):
     rescan-all so the job can finish quickly).
     """
     import os
+
     from backend.services.grouper import regroup_from_db
     from backend.services.icon_service import extract_group_icon, pick_best_exe
 
@@ -512,7 +511,7 @@ def _extract_icons_for_disk(db, root_path: str):
     groups = db.query(FileGroup).filter(
         FileGroup.category == "Games",
         FileGroup.root_path.like(root_path.rstrip("\\\"/") + "%"),
-        (FileGroup.thumbnail_path == None) | (FileGroup.thumbnail_path == ""),
+        FileGroup.thumbnail_path.is_(None) | (FileGroup.thumbnail_path == ""),
     ).all()
     for grp in groups:
         try:
@@ -531,7 +530,6 @@ def _mark_missing(db, root_path: str):
     Mark FileRecords under root_path as missing if the file is gone from disk.
     """
     import os
-    from pathlib import Path
     sep = os.sep
     clean_root = root_path.rstrip(sep) or sep
     like_prefix = clean_root + sep + "%"

@@ -13,12 +13,11 @@ Strategy:
 """
 from __future__ import annotations
 
+import contextlib
 import os
-import re
 from pathlib import Path
 
 from ai.categorizer import categorize_folder
-from backend.config import logger
 
 # ── Generic sub-folder names ──────────────────────────────────────────────────
 # Folders with these names are internal parts of a larger unit, NOT the unit
@@ -51,8 +50,7 @@ _GENERIC = {
     "epic games", "gog games", "gog galaxy",
     "steamlibrary", "steam library",
     # Game/software library containers (hold many independent groups)
-    "games", "game", "library",
-    "program files", "program files (x86)",
+    "games", "game", "program files", "program files (x86)",
     "downloads",
     # Additional game-internal asset folders
     "meshes", "mesh", "animations", "animation",
@@ -227,10 +225,8 @@ def _sum_size_recursive(path: Path) -> int:
     try:
         for dirpath, _, files in os.walk(path):
             for f in files:
-                try:
+                with contextlib.suppress(OSError):
                     total += (Path(dirpath) / f).stat().st_size
-                except OSError:
-                    pass
     except PermissionError:
         pass
     return total
@@ -257,14 +253,16 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
     database instead of walking the disk.  Safe to call after recategorize.
     """
     import os
+
     from sqlalchemy import func
+
     from database.models import FileRecord
 
     root = Path(root_path)
     sep = os.sep
     # Strip trailing separator to avoid double-separator in LIKE pattern.
     # e.g. "C:\" + "\" + "%" would produce "C:\\%" (double backslash) which
-    # never matches real paths like "C:\Users\...".  Stripping gives "C:\%". 
+    # never matches real paths like "C:\Users\...".  Stripping gives "C:\%".
     clean_root = root_path.rstrip(sep) or sep
     like_prefix = clean_root + sep + "%"
 

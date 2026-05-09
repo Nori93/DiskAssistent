@@ -6,9 +6,8 @@ from __future__ import annotations
 
 import datetime
 import os
-import platform
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from backend.config import IS_WINDOWS, logger
 
@@ -20,8 +19,8 @@ def get_available_disks() -> list[dict]:
     disks = []
 
     if IS_WINDOWS:
-        import string
         import ctypes
+        import string
         bitmask = ctypes.windll.kernel32.GetLogicalDrives()
         for letter in string.ascii_uppercase:
             if bitmask & 1:

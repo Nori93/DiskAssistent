@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from typing import Optional
 
 from database.models import FileGroup, FileRecord, get_db
 
@@ -16,7 +15,7 @@ router = APIRouter(prefix="/api/groups", tags=["Groups"])
 
 
 @router.get("/")
-def list_groups(category: Optional[str] = None, db: Session = Depends(get_db)):
+def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     """Return all groups, optionally filtered by category."""
     q = db.query(FileGroup)
     if category:
@@ -40,7 +39,7 @@ def list_groups(category: Optional[str] = None, db: Session = Depends(get_db)):
         .group_by(FileRecord.group_id)
         .all()
     )
-    counts = {gid: cnt for gid, cnt in counts_rows}
+    counts = dict(counts_rows)
 
     result = []
     for g in groups:
@@ -112,10 +111,7 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
 
     for f in files:
         rel = f.full_path
-        if rel.lower().startswith(root_lower):
-            rel = rel[len(root_path):].lstrip("/\\")
-        else:
-            rel = f.name  # file outside root — put directly in root
+        rel = rel[len(root_path):].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
 
         # Split into folder parts (drop the filename at the end)
         parts = rel.replace("\\", "/").split("/")
@@ -140,8 +136,8 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
 
 
 class UpdateGroupBody(BaseModel):
-    category:    Optional[str] = None
-    description: Optional[str] = None
+    category:    str | None = None
+    description: str | None = None
 
 
 @router.patch("/{group_id}")

@@ -12,10 +12,10 @@ the caller can fall back to the emoji icon.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from backend.config import IS_WINDOWS, THUMBNAILS_DIR, logger
 
@@ -37,7 +37,7 @@ try {
 """
 
 
-def extract_group_icon(group_id: int, exe_path: str) -> Optional[str]:
+def extract_group_icon(group_id: int, exe_path: str) -> str | None:
     """Extract the icon from *exe_path* and store it as group_{group_id}.png.
 
     Returns the URL path (``/static/img/thumbnails/group_<id>.png``) on
@@ -91,13 +91,11 @@ def extract_group_icon(group_id: int, exe_path: str) -> Optional[str]:
         logger.debug("icon_service: exception for group %d: %s", group_id, exc)
         return None
     finally:
-        try:
+        with contextlib.suppress(Exception):
             ps1_path.unlink(missing_ok=True)
-        except Exception:
-            pass
 
 
-def pick_best_exe(db, group_id: int, root_path: str) -> Optional[str]:
+def pick_best_exe(db, group_id: int, root_path: str) -> str | None:
     """Return the full_path of the most representative .exe in a group.
 
     Priority order:
@@ -107,6 +105,7 @@ def pick_best_exe(db, group_id: int, root_path: str) -> Optional[str]:
       4. Largest .exe anywhere in the group.
     """
     import difflib
+
     from database.models import FileRecord
 
     folder_name = Path(root_path).name.lower()

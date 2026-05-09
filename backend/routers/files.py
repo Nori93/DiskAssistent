@@ -3,14 +3,12 @@ Files API endpoints — search, filter, update, stats.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from database.models import FileRecord, get_db
 from ai.categorizer import CATEGORIES
+from database.models import FileRecord, get_db
 
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
@@ -19,11 +17,11 @@ router = APIRouter(prefix="/api/files", tags=["Files"])
 
 @router.get("/")
 def list_files(
-    category: Optional[str] = None,
-    extension: Optional[str] = None,
-    search:    Optional[str] = None,
-    missing:   Optional[bool]= None,
-    group_id:  Optional[int] = None,
+    category: str | None = None,
+    extension: str | None = None,
+    search:    str | None = None,
+    missing:   bool | None= None,
+    group_id:  int | None = None,
     limit:  int = Query(100, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
@@ -104,8 +102,8 @@ def get_file(file_id: int, db: Session = Depends(get_db)):
 
 class RecategorizeRequest(BaseModel):
     only_auto: bool = True      # True = skip files the user overrode manually
-    category:  Optional[str] = None   # limit to files currently in this category
-    group_id:  Optional[int] = None   # limit to files in this group
+    category:  str | None = None   # limit to files currently in this category
+    group_id:  int | None = None   # limit to files in this group
     regroup:   bool = True            # also rebuild groups from DB after recategorizing
 
 
@@ -172,6 +170,7 @@ def cleanup_database(db: Session = Depends(get_db)):
     Returns counts of removed and fixed records.
     """
     import os
+
     from ai.categorizer import categorize
     from backend.config import logger
 
@@ -206,9 +205,9 @@ def cleanup_database(db: Session = Depends(get_db)):
 # ── Update ────────────────────────────────────────────────────────────────────
 
 class UpdateFileBody(BaseModel):
-    category:    Optional[str] = None
-    tags:        Optional[str] = None
-    description: Optional[str] = None
+    category:    str | None = None
+    tags:        str | None = None
+    description: str | None = None
 
 
 @router.patch("/{file_id}")
