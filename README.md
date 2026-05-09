@@ -240,3 +240,77 @@ Interactive API docs available at: `http://localhost:8000/docs`
 ## 📦 Optional Enhancements
 
 To enable duplicate file detection, image thumbnails, or user authentication, see the issues/roadmap in the repository.
+
+---
+
+## 🔮 Przyszłościowy wygląd aplikacji
+
+DiskAssistent jest rozwijany jako pełnoprawne centrum zarządzania plikami w sieci domowej i małym biurze. Poniżej plan dalszego rozwoju:
+
+### Interfejs użytkownika
+- **Ciemny / jasny motyw** z zapisem preferencji w przeglądarce
+- **Panel statystyk na żywo** — wykresy kołowe zajętości kategorii, histogramy rozmiarów plików i oś czasu skanowań
+- **Widok mapy drzewa (Treemap)** — wizualizacja dysku jako kwadratów proporcjonalnych do rozmiaru grup i folderów
+- **Szybki podgląd plików** — wbudowany viewer dla obrazów, tekstów i PDF bezpośrednio w oknie przeglądarki
+- **Globalny skrót wyszukiwania** (Ctrl+K / Cmd+K) z wyszukiwaniem pełnotekstowym po nazwie, tagach i opisie
+
+### Inteligentna kategoryzacja
+- **Model ML trenowany na własnych danych** użytkownika — im dłużej aplikacja działa, tym lepiej rozumie kolekcję
+- **Tagi automatyczne** generowane na podstawie metadanych EXIF (zdjęcia), ID3 (muzyka) i nagłówków dokumentów
+- **Wykrywanie duplikatów** — porównanie po rozmiarze i haszowaniu SHA-256 z możliwością usunięcia w jednym kliknięciu
+- **Reguły niestandardowe** — użytkownik definiuje własne reguły kategoryzacji (np. „wszystko z folderu `Faktury/` → Documents")
+
+### Operacje na plikach
+- **Masowe przenoszenie i zmiana nazw** — możliwość zaznaczenia wielu plików i wykonania operacji na całej grupie
+- **Historia operacji i cofanie** — każda operacja (przeniesienie, zmiana nazwy, usunięcie) jest logowana z możliwością cofnięcia
+- **Harmonogram automatycznego skanowania** — cykliczne skany dysku w tle bez ingerencji użytkownika
+
+### Bezpieczeństwo i wielodostęp
+- **Logowanie użytkowników** z rolami (Admin, Read-only) i sesjami JWT
+- **Dziennik aktywności** — kto, kiedy i co zrobił z którym plikiem
+- **HTTPS out-of-the-box** — wbudowana obsługa certyfikatów Let's Encrypt lub własnych
+
+---
+
+## 💾 Backup — przenoszenie plików na NAS lub tworzenie kopii zapasowych
+
+> Planowana funkcjonalność
+
+DiskAssistent będzie umożliwiał tworzenie kopii zapasowych wybranych plików lub całych grup na sieciowe zasoby dyskowe (NAS) lub lokalny katalog docelowy.
+
+### Jak to będzie działać
+
+1. **Definiowanie miejsca docelowego** — użytkownik konfiguruje jeden lub więcej celów backupu:
+   - ścieżka UNC do udziału sieciowego (np. `\\NAS\Backup\`)
+   - lokalny folder na innym dysku (np. `D:\Backup\`)
+   - przyszłościowo: integracja z chmurą (WebDAV, SFTP)
+
+2. **Wybór zakresu** — backup można uruchomić dla:
+   - pojedynczego pliku z poziomu modalu szczegółów
+   - całej grupy (np. „zrób kopię gry `Minecraft`")
+   - kategorii (np. „zarchiwizuj wszystkie Dokumenty")
+   - plików ze znacznikiem `is_missing = false` (tylko te obecne na dysku)
+
+3. **Tryby operacji**:
+   - **Kopia** — plik pozostaje w oryginalnym miejscu, do celu trafia kopia
+   - **Przeniesienie** — plik jest przenoszony do celu i oznaczany w bazie jako `moved_to_backup = true`
+   - **Synchronizacja (mirror)** — porównanie po dacie i rozmiarze, kopiowane są tylko zmienione pliki
+
+4. **Postęp i raport** — backup uruchamiany jest w tle (tak jak skanowanie), a jego postęp można śledzić w tym samym stylu co `rescan-all`, z podziałem na pliki skopiowane / pominięte / błędne
+
+5. **Weryfikacja integralności** — opcjonalne porównanie SHA-256 oryginału i kopii po zakończeniu transferu
+
+### Planowane API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/backup/targets` | Lista skonfigurowanych celów backupu |
+| `POST` | `/api/backup/targets` | Dodaj nowy cel (ścieżka UNC, folder, SFTP) |
+| `POST` | `/api/backup/start` | Uruchom backup dla wybranego zakresu |
+| `GET` | `/api/backup/status/{job_id}` | Śledź postęp zadania backupu |
+| `GET` | `/api/backup/history` | Historia wykonanych kopii zapasowych |
+
+### Wymagania środowiskowe
+
+- Dostęp do udziału sieciowego musi być zamontowany w systemie operacyjnym lub podany jako ścieżka UNC dostępna z konta uruchamiającego serwer
+- Dla SFTP planowana jest opcjonalna zależność: `paramiko`
