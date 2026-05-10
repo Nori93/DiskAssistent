@@ -20,15 +20,15 @@ if ($Down) {
 # ── Build ─────────────────────────────────────────────────────────────────────
 if ($Build) {
     Write-Host "Building worker..." -ForegroundColor Cyan
-    podman build -f Containerfile.worker  -t diskassistent_worker  .
+    podman build -f "$PSScriptRoot\Containerfile.worker"  -t diskassistent_worker  "$PSScriptRoot"
     if ($LASTEXITCODE -ne 0) { Write-Error "Worker build failed"; exit 1 }
 
     Write-Host "Building webapi..." -ForegroundColor Cyan
-    podman build -f Containerfile.webapi  -t diskassistent_webapi  .
+    podman build -f "$PSScriptRoot\Containerfile.webapi"  -t diskassistent_webapi  "$PSScriptRoot"
     if ($LASTEXITCODE -ne 0) { Write-Error "WebAPI build failed"; exit 1 }
 
     Write-Host "Building frontend..." -ForegroundColor Cyan
-    podman build -f Containerfile.frontend -t diskassistent_frontend .
+    podman build -f "$PSScriptRoot\Containerfile.frontend" -t diskassistent_frontend "$PSScriptRoot"
     if ($LASTEXITCODE -ne 0) { Write-Error "Frontend build failed"; exit 1 }
 
     Write-Host "All images built." -ForegroundColor Green
