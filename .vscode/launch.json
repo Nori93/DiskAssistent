@@ -73,31 +73,8 @@
       "presentation": { "group": "DiskAssistent", "order": 5 }
     },
 
-    // ── Podman ──────────────────────────────────────────────────────────────
-    {
-      "name": "Podman: up --build",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1 -Build",
-      "cwd": "${workspaceFolder}",
-      "presentation": { "group": "Podman", "order": 1 }
-    },
-    {
-      "name": "Podman: up (no rebuild)",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1",
-      "cwd": "${workspaceFolder}",
-      "presentation": { "group": "Podman", "order": 2 }
-    },
-    {
-      "name": "Podman: down",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1 -Down",
-      "cwd": "${workspaceFolder}",
-      "presentation": { "group": "Podman", "order": 3 }
-    }
+    // ── Podman (use Terminal → Run Task for Podman operations) ─────────────────
+
   ],
 
   "compounds": [
@@ -125,9 +102,9 @@
     {
       "name": "Podman + Host Agent (native)",
       "configurations": [
-        "Host Agent (port 8003, --reload)",
-        "Podman: up --build"
+        "Host Agent (port 8003, --reload)"
       ],
+      "preLaunchTask": "Podman: Build & Start",
       "stopAll": true,
       "presentation": { "group": "Podman", "order": 1 }
     }

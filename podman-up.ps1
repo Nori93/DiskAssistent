@@ -2,8 +2,9 @@
 # Build images and start DiskAssistent containers using plain podman.
 
 param(
-    [switch]$Build = $false,
-    [switch]$Down  = $false
+    [switch]$Build   = $false,
+    [switch]$Down    = $false,
+    [switch]$NoStart = $false
 )
 
 $ProjectName = "diskassistent"
@@ -32,6 +33,7 @@ if ($Build) {
     if ($LASTEXITCODE -ne 0) { Write-Error "Frontend build failed"; exit 1 }
 
     Write-Host "All images built." -ForegroundColor Green
+    if ($NoStart) { exit 0 }
 }
 
 # ── Network & Volumes ─────────────────────────────────────────────────────────
