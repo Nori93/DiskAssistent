@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
 
-    // ── Worker Service (native Windows) ───────────────────────────────────
+    // ── Python Services (native Windows) ──────────────────────────────────
     {
       "label": "Worker: Start (native)",
       "type": "shell",
@@ -14,6 +14,46 @@
       },
       "isBackground": true,
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": {
+        "owner": "worker",
+        "pattern": { "regexp": "^ERROR" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started server process",
+          "endsPattern": "Application startup complete"
+        }
+      }
+    },
+    {
+      "label": "WebAPI: Start (native)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"],
+      "options": {
+        "cwd": "${workspaceFolder}/webapi",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/webapi;${workspaceFolder}/database-service",
+          "WEBAPI_PORT": "8001",
+          "WORKER_URL": "http://localhost:8002"
+        }
+      },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": {
+        "owner": "webapi",
+        "pattern": { "regexp": "^ERROR" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started server process",
+          "endsPattern": "Application startup complete"
+        }
+      }
+    },
+    {
+      "label": "All Services: Start (native)",
+      "dependsOn": ["Worker: Start (native)", "WebAPI: Start (native)", "Frontend: ng serve (dev)"],
+      "dependsOrder": "parallel",
+      "presentation": { "reveal": "silent" },
       "problemMatcher": []
     },
 
@@ -54,6 +94,28 @@
     },
 
     // ── Frontend ───────────────────────────────────────────────────────
+    {
+      "label": "Frontend: ng serve (dev)",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "./node_modules/@angular/cli/bin/ng",
+        "serve",
+        "--proxy-config", "proxy.conf.json"
+      ],
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": {
+        "owner": "ng-serve",
+        "pattern": { "regexp": "^ERROR in (.*)$", "file": 1, "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Building\\.",
+          "endsPattern": "Application bundle generation complete"
+        }
+      }
+    },
     {
       "label": "Frontend: npm install",
       "type": "shell",

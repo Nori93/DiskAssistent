@@ -8,7 +8,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
-      "args": ["main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"],
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8001"],
       "cwd": "${workspaceFolder}/webapi",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/webapi;${workspaceFolder}/database-service",
@@ -24,7 +24,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
-      "args": ["main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"],
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8002"],
       "cwd": "${workspaceFolder}/worker-service",
       "env": {
         "PYTHONPATH": "${workspaceFolder}/worker-service;${workspaceFolder}/database-service;${workspaceFolder}",
@@ -35,11 +35,11 @@
       "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
-      "name": "Frontend: ng serve (port 4200)",
-      "type": "node-terminal",
+      "name": "Frontend: Chrome Debug (port 4200)",
+      "type": "chrome",
       "request": "launch",
-      "command": "npx ng serve --proxy-config proxy.conf.json --open",
-      "cwd": "${workspaceFolder}/frontend",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/frontend/src",
       "presentation": { "group": "DiskAssistent", "order": 3 }
     }
 
@@ -49,9 +49,17 @@
     {
       "name": "All Services (native dev)",
       "configurations": [
+        "Frontend: Chrome Debug (port 4200)"
+      ],
+      "preLaunchTask": "All Services: Start (native)",
+      "stopAll": true,
+      "presentation": { "group": "DiskAssistent", "order": 1 }
+    },
+    {
+      "name": "Python Services (native dev)",
+      "configurations": [
         "Worker Service (port 8002, --reload)",
-        "WebAPI (port 8001, --reload)",
-        "Frontend: ng serve (port 4200)"
+        "WebAPI (port 8001, --reload)"
       ],
       "stopAll": true,
       "presentation": { "group": "DiskAssistent", "order": 1 }
