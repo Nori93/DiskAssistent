@@ -29,7 +29,7 @@ IS_LINUX = CURRENT_OS == "Linux"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = _ROOT
-THUMBNAILS_DIR = _ROOT.parent / "frontend" / "dist" / "assets" / "thumbnails"
+THUMBNAILS_DIR = _ROOT / "frontend" / "static" / "img" / "thumbnails"
 THUMBNAILS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── App Settings ──────────────────────────────────────────────────────────────

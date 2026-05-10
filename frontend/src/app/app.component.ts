@@ -4,6 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from './services/api.service';
 
 interface Toast { id: number; message: string; type: string; }
+interface FlatNode {
+  id: string;
+  type: 'folder' | 'file';
+  name: string;
+  path: string;
+  depth: number;
+  fileCount: number;
+  file?: any;
+  parentPaths: string[];
+}
 
 @Component({
   selector: 'app-root',
@@ -111,20 +121,91 @@ interface Toast { id: number; message: string; type: string; }
       </div>
       <div class="groups-tiles-grid">
         @for (g of categoryGroups; track g.id) {
-          <div class="group-tile" (click)="openCategoryGroup(g)" [title]="g.root_path">
+          <div class="group-tile" (click)="openGroupExplorer(g)" [title]="g.root_path">
             <div class="group-tile-thumb">
               @if (g.thumbnail_path) {
-                <img class="group-tile-img" [src]="g.thumbnail_path" [alt]="g.name" />
+                <img class="group-tile-img" [src]="'/api/groups/' + g.id + '/thumbnail?t=' + (g._ts || 0)" [alt]="g.name" (error)="g.thumbnail_path = ''" />
               } @else {
                 <div class="group-tile-icon">{{catIcon(g.category)}}</div>
               }
+              <button class="group-tile-refresh" title="Refresh icon" (click)="stopAndRefreshIcon($event, g.id)">↺</button>
             </div>
             <div class="group-tile-name">{{g.name}}</div>
-            <div class="group-tile-meta"><span [class]="'badge badge-' + g.category">{{g.category}}</span> · {{(g.file_count || 0) | number}} files</div>
+            <div class="group-tile-meta"><span [class]="'badge badge-' + g.category">{{g.category}}</span> · {{(g.file_count || 0) | number}} files@if (g.is_archived) { <span style="margin-left:6px;font-size:11px;color:#6dbf6d">✅ Archived</span>}</div>
             <button class="group-tile-open-btn" (click)="stopAndOpenFolder($event, g.root_path)">📂 Open</button>
           </div>
         }
         @empty { <p style="color:var(--text-muted)">No groups found for this category.</p> }
+      </div>
+    </div>
+
+    <!-- ── FILE EXPLORER (group detail) VIEW ── -->
+    <div class="view" [class.active]="currentView === 'explorer'">
+      <div class="category-view-header" style="margin-bottom:12px">
+        <button class="btn btn-sm" (click)="backToCategory()">← {{categoryTitle}}</button>
+        <span style="color:var(--text-muted);margin:0 8px">/</span>
+        <strong>{{explorerGroup?.name}}</strong>
+        <span style="margin-left:auto;font-size:13px;color:var(--text-muted)">{{explorerFileCount | number}} files</span>
+        <button class="btn btn-sm" title="Open folder in Explorer" (click)="stopAndOpenFolder($event, explorerGroup?.root_path)">📂 Open Folder</button>
+        <button class="btn btn-sm" title="Refresh icon" (click)="stopAndRefreshIcon($event, explorerGroup?.id)">↺ Refresh Icon</button>
+        @if (!explorerGroup?.is_archived) {
+          <button class="btn btn-sm" title="Archive group to archive directory" (click)="archiveExplorerGroup($event)"
+            [disabled]="archiveJobStatus === 'running'">
+            📦 Archive
+          </button>
+        } @else {
+          <button class="btn btn-sm" title="Restore group from archive" (click)="unarchiveExplorerGroup($event)"
+            [disabled]="archiveJobStatus === 'running'">
+            ♻️ Unarchive
+          </button>
+        }
+        <button class="btn btn-sm btn-danger" title="Delete this group" (click)="deleteExplorerGroup($event)" [disabled]="archiveJobStatus === 'running'">🗑 Delete Group</button>
+      </div>
+      @if (archiveJobStatus === 'running') {
+        <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border-radius:6px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:13px">{{_archiveJobType === 'restore' ? '♻️ Restoring…' : '📦 Archiving…'}} {{archiveJobProgress}}%</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:6px">
+            <div style="height:6px;border-radius:4px;background:var(--accent);transition:width .4s" [style.width.%]="archiveJobProgress"></div>
+          </div>
+        </div>
+      }
+      @if (archiveJobStatus === 'done') {
+        <div style="margin-bottom:12px;padding:10px 12px;background:#1a3a1a;border-radius:6px;font-size:13px">✅ {{_archiveJobType === 'restore' ? 'Restore complete.' : 'Archive complete.'}}</div>
+      }
+      @if (archiveJobStatus === 'error') {
+        <div style="margin-bottom:12px;padding:10px 12px;background:#3a1a1a;border-radius:6px;font-size:13px">❌ {{_archiveJobType === 'restore' ? 'Restore error:' : 'Archive error:'}} {{archiveJobError}}</div>
+      }
+      <div id="file-explorer">
+        @if (explorerLoading) {
+          <p style="color:var(--text-muted);padding:24px">Loading…</p>
+        } @else {
+          @for (node of visibleNodes; track node.id) {
+            @if (node.type === 'folder') {
+              <div class="fe-row fe-folder-row" [style.padding-left.px]="8 + node.depth * 20"
+                   (click)="toggleFolder(node.path)">
+                <span class="fe-chevron">{{collapsedPaths.has(node.path) ? '▶' : '▼'}}</span>
+                <span class="fe-icon-folder">📁</span>
+                <span class="fe-name">{{node.name}}</span>
+                <span class="fe-badge">{{node.fileCount | number}}</span>
+                <button class="fe-open-btn" title="Open in Explorer" (click)="stopAndOpenFolder($event, node.path)">📂</button>
+              </div>
+            } @else {
+              <div class="fe-row fe-file-row" [style.padding-left.px]="8 + node.depth * 20 + 20"
+                   (click)="openFileDetail(node.file.id)">
+                <span class="fe-icon-file">{{fileIcon(node.file.extension)}}</span>
+                <span class="fe-name fe-file-name" [title]="node.file.full_path">{{node.file.name}}</span>
+                <span class="fe-size">{{humanSize(node.file.size_bytes)}}</span>
+                <span class="fe-date">{{node.file.modified_at ? (node.file.modified_at | date:'shortDate') : '—'}}</span>
+                <span class="fe-actions">
+                  <button class="btn btn-sm fe-info-btn" title="Details" (click)="$event.stopPropagation(); openFileDetail(node.file.id)">ℹ</button>
+                </span>
+              </div>
+            }
+          }
+          @empty {
+            <p style="color:var(--text-muted);padding:24px">No files found.</p>
+          }
+        }
       </div>
     </div>
 
@@ -239,20 +320,25 @@ interface Toast { id: number; message: string; type: string; }
 
     <!-- ── GROUPS VIEW ── -->
     <div class="view" [class.active]="currentView === 'groups'">
-      <h2 class="view-title">Detected Groups</h2>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <h2 class="view-title" style="margin:0">Detected Groups</h2>
+        <button class="btn btn-sm" (click)="refreshAllIcons()" [disabled]="refreshAllInProgress" style="margin-left:auto">
+          ↺ {{refreshAllInProgress ? 'Refreshing… (' + refreshAllDone + '/' + refreshAllTotal + ')' : 'Refresh All Icons'}}
+        </button>
+      </div>
       <div class="file-grid">
         @for (g of groups; track g.id) {
-          <div class="group-tile" (click)="openGroup(g)" [title]="g.root_path">
+          <div class="group-tile" (click)="openGroupExplorer(g)" [title]="g.root_path">
             <div class="group-tile-thumb">
               @if (g.thumbnail_path) {
-                <img class="group-tile-img" [src]="g.thumbnail_path" [alt]="g.name" />
+                <img class="group-tile-img" [src]="'/api/groups/' + g.id + '/thumbnail?t=' + (g._ts || 0)" [alt]="g.name" (error)="g.thumbnail_path = ''" />
               } @else {
                 <div class="group-tile-icon">{{catIcon(g.category)}}</div>
               }
               <button class="group-tile-refresh" title="Refresh icon" (click)="stopAndRefreshIcon($event, g.id)">↺</button>
             </div>
             <div class="group-tile-name">{{g.name}}</div>
-            <div class="group-tile-meta"><span [class]="'badge badge-' + g.category">{{g.category}}</span> · {{(g.file_count || 0) | number}} files</div>
+            <div class="group-tile-meta"><span [class]="'badge badge-' + g.category">{{g.category}}</span> · {{(g.file_count || 0) | number}} files@if (g.is_archived) { <span style="margin-left:6px;font-size:11px;color:#6dbf6d">✅ Archived</span>}</div>
             <button class="group-tile-open-btn" (click)="stopAndOpenFolder($event, g.root_path)">📂 Open</button>
           </div>
         }
@@ -374,14 +460,14 @@ interface Toast { id: number; message: string; type: string; }
   </div>
 </div>
 
-<!-- Confirm delete modal -->
+<!-- Confirm modal -->
 <div class="modal-backdrop" [class.hidden]="!showConfirmModal">
   <div class="modal modal-sm">
-    <h3>Confirm Delete</h3>
+    <h3>{{confirmTitle}}</h3>
     <p>{{confirmMessage}}</p>
     <div class="modal-footer">
       <button class="btn" (click)="resolveConfirm(false)">Cancel</button>
-      <button class="btn btn-danger" (click)="resolveConfirm(true)">Delete</button>
+      <button class="btn btn-danger" (click)="resolveConfirm(true)">{{confirmLabel}}</button>
     </div>
   </div>
 </div>
@@ -404,6 +490,22 @@ export class AppComponent implements OnInit, OnDestroy {
   logs: any[] = [];
   stats: any = null;
   categoryGroups: any[] = [];
+
+  // ── Explorer state ────────────────────────────────────────────
+  explorerGroup: any = null;
+  explorerLoading = false;
+  explorerNodes: FlatNode[] = [];
+  collapsedPaths = new Set<string>();
+
+  get visibleNodes(): FlatNode[] {
+    return this.explorerNodes.filter(
+      node => !node.parentPaths.some(p => this.collapsedPaths.has(p))
+    );
+  }
+
+  get explorerFileCount(): number {
+    return this.explorerNodes.filter(n => n.type === 'file').length;
+  }
 
   // ── State ─────────────────────────────────────────────────────
   total = 0;
@@ -437,6 +539,8 @@ export class AppComponent implements OnInit, OnDestroy {
   // ── Confirm modal ─────────────────────────────────────────────
   showConfirmModal = false;
   confirmMessage = '';
+  confirmTitle = 'Confirm Delete';
+  confirmLabel = 'Delete';
   private confirmResolve: ((v: boolean) => void) | null = null;
 
   // ── Toast ─────────────────────────────────────────────────────
@@ -531,6 +635,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.categoryTitle = cat;
       this.api.getGroups({ category: cat }).subscribe({
         next: (res) => { this.categoryGroups = Array.isArray(res) ? res : (res.groups ?? []); },
+        error: (e) => this.toast('Failed to load groups: ' + e.message, 'error'),
       });
     } else {
       this.currentView = 'files';
@@ -544,19 +649,188 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showScanModal = true;
   }
 
+  openGroupExplorer(group: any): void {
+    this.explorerGroup = group;
+    this.explorerLoading = true;
+    this.collapsedPaths.clear();
+    this.explorerNodes = [];
+    this.currentView = 'explorer';
+
+    this.api.getGroupTree(group.id).subscribe({
+      next: (tree) => {
+        this.explorerNodes = [];
+        this._flattenTree(tree, 0, []);
+        // Collapse all folders by default
+        this.collapsedPaths = new Set(
+          this.explorerNodes.filter(n => n.type === 'folder').map(n => n.path)
+        );
+        this.explorerLoading = false;
+      },
+      error: (e) => {
+        this.explorerLoading = false;
+        this.toast('Failed to load group files: ' + e.message, 'error');
+      },
+    });
+  }
+
+  private _flattenTree(node: any, depth: number, parentPaths: string[]): void {
+    const sortedFolders = Object.keys(node.children || {}).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+    const sortedFiles = [...(node.files || [])].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+
+    for (const folderName of sortedFolders) {
+      const child = node.children[folderName];
+      const fc = this._countTreeFiles(child);
+      this.explorerNodes.push({
+        id: 'f_' + child.path,
+        type: 'folder',
+        name: folderName,
+        path: child.path,
+        depth,
+        fileCount: fc,
+        parentPaths: [...parentPaths],
+      });
+      this._flattenTree(child, depth + 1, [...parentPaths, child.path]);
+    }
+
+    for (const file of sortedFiles) {
+      this.explorerNodes.push({
+        id: 'file_' + file.id,
+        type: 'file',
+        name: file.name,
+        path: file.full_path,
+        depth,
+        fileCount: 0,
+        file,
+        parentPaths: [...parentPaths],
+      });
+    }
+  }
+
+  private _countTreeFiles(node: any): number {
+    let n = (node.files || []).length;
+    for (const child of Object.values(node.children || {})) {
+      n += this._countTreeFiles(child);
+    }
+    return n;
+  }
+
+  toggleFolder(path: string): void {
+    if (this.collapsedPaths.has(path)) this.collapsedPaths.delete(path);
+    else this.collapsedPaths.add(path);
+    // Force angular to re-evaluate visibleNodes getter
+    this.collapsedPaths = new Set(this.collapsedPaths);
+  }
+
+  backToCategory(): void {
+    this.currentView = 'category';
+    this.explorerGroup = null;
+    this.archiveJobStatus = 'idle';
+    this.archiveJobProgress = 0;
+    if (this.archivePollTimer) { clearTimeout(this.archivePollTimer); this.archivePollTimer = null; }
+  }
+
+  archiveJobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
+  archiveJobProgress = 0;
+  archiveJobError = '';
+  private archivePollTimer: any = null;
+  _archiveJobType: 'archive' | 'restore' = 'archive';
+
+  archiveExplorerGroup(event: MouseEvent): void {
+    event.stopPropagation();
+    const g = this.explorerGroup;
+    if (!g) return;
+    this.confirmAction(`Archive group "${g.name}"? Files will be moved to the archive directory.`, 'Confirm Archive', 'Archive').then(ok => {
+      if (!ok) return;
+      this.api.archiveGroup(g.id).subscribe({
+        next: () => {
+          this.toast(`Archive started for "${g.name}".`, 'success');
+          this.archiveJobStatus = 'running';
+          this.archiveJobProgress = 0;
+          this._archiveJobType = 'archive';
+          this._pollArchive(g.id);
+        },
+        error: (e) => this.toast('Archive failed: ' + (e.error?.detail || e.message), 'error'),
+      });
+    });
+  }
+
+  unarchiveExplorerGroup(event: MouseEvent): void {
+    event.stopPropagation();
+    const g = this.explorerGroup;
+    if (!g) return;
+    this.confirmAction(`Restore group "${g.name}" from archive? Files will be moved back to their original location.`, 'Confirm Unarchive', 'Unarchive').then(ok => {
+      if (!ok) return;
+      this.api.restoreGroup(g.id).subscribe({
+        next: () => {
+          this.toast(`Restore started for "${g.name}".`, 'success');
+          this.archiveJobStatus = 'running';
+          this.archiveJobProgress = 0;
+          this._archiveJobType = 'restore';
+          this._pollArchive(g.id);
+        },
+        error: (e) => this.toast('Unarchive failed: ' + (e.error?.detail || e.message), 'error'),
+      });
+    });
+  }
+
+  private _pollArchive(groupId: number): void {
+    if (this.archivePollTimer) clearTimeout(this.archivePollTimer);
+    this.api.getArchiveStatus(groupId).subscribe({
+      next: (s) => {
+        this.archiveJobProgress = s.progress ?? 0;
+        if (s.status === 'running') {
+          this.archivePollTimer = setTimeout(() => this._pollArchive(groupId), 2000);
+        } else if (s.status === 'done') {
+          this.archiveJobStatus = 'done';
+          this.archiveJobProgress = 100;
+          // Sync is_archived flag based on job type
+          if (this.explorerGroup) {
+            const archived = this._archiveJobType === 'archive';
+            this.explorerGroup.is_archived = archived;
+            const id = this.explorerGroup.id;
+            const patch = (arr: any[]) => { const g = arr.find(x => x.id === id); if (g) g.is_archived = archived; };
+            patch(this.groups);
+            patch(this.categoryGroups);
+          }
+        } else if (s.status === 'error') {
+          this.archiveJobStatus = 'error';
+          this.archiveJobError = s.error || 'Unknown error';
+        }
+      },
+      error: () => {
+        this.archivePollTimer = setTimeout(() => this._pollArchive(groupId), 3000);
+      },
+    });
+  }
+
+  deleteExplorerGroup(event: MouseEvent): void {
+    event.stopPropagation();
+    const g = this.explorerGroup;
+    if (!g) return;
+    this.confirmAction(`Permanently delete group "${g.name}" and all its file records?`).then(ok => {
+      if (!ok) return;
+      this.api.deleteGroup(g.id).subscribe({
+        next: () => {
+          this.toast(`Group "${g.name}" deleted.`, 'success');
+          this.groups = this.groups.filter(x => x.id !== g.id);
+          this.categoryGroups = this.categoryGroups.filter(x => x.id !== g.id);
+          this.backToCategory();
+        },
+        error: (e) => this.toast('Delete failed: ' + e.message, 'error'),
+      });
+    });
+  }
+
   openCategoryGroup(group: any): void {
-    this.currentGroupId = group.id;
-    this.currentView = 'files';
-    this.offset = 0;
-    this.loadFiles();
+    this.openGroupExplorer(group);
   }
 
   openGroup(group: any): void {
-    this.currentGroupId = group.id;
-    this.currentCategory = group.category;
-    this.currentView = 'files';
-    this.offset = 0;
-    this.loadFiles();
+    this.openGroupExplorer(group);
   }
 
   // ── Topbar ────────────────────────────────────────────────────
@@ -753,10 +1027,63 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // ── Groups ────────────────────────────────────────────────────
 
+  refreshAllInProgress = false;
+  refreshAllDone = 0;
+  refreshAllTotal = 0;
+
+  refreshAllIcons(): void {
+    const list = [...this.groups];
+    if (!list.length) return;
+    this.refreshAllInProgress = true;
+    this.refreshAllDone = 0;
+    this.refreshAllTotal = list.length;
+
+    const next = (idx: number) => {
+      if (idx >= list.length) {
+        this.refreshAllInProgress = false;
+        this.toast(`Refreshed icons for ${list.length} groups.`, 'success');
+        return;
+      }
+      const g = list[idx];
+      this.api.refreshGroupIcon(g.id).subscribe({
+        next: (res) => {
+          const ts = Date.now();
+          const update = (arr: any[]) => {
+            const found = arr.find(x => x.id === g.id);
+            if (found) { found.thumbnail_path = res.thumbnail_path; found._ts = ts; }
+          };
+          update(this.groups);
+          update(this.categoryGroups);
+          this.refreshAllDone++;
+          next(idx + 1);
+        },
+        error: () => {
+          this.refreshAllDone++;
+          next(idx + 1);
+        },
+      });
+    };
+    next(0);
+  }
+
   stopAndRefreshIcon(event: MouseEvent, id: number): void {
     event.stopPropagation();
     this.api.refreshGroupIcon(id).subscribe({
-      next: () => this.toast('Icon refreshed.', 'success'),
+      next: (res) => {
+        const ts = Date.now();
+        // Update both groups and categoryGroups in-memory so img src re-fetches
+        const update = (arr: any[]) => {
+          const g = arr.find(x => x.id === id);
+          if (g) { g.thumbnail_path = res.thumbnail_path; g._ts = ts; }
+        };
+        update(this.groups);
+        update(this.categoryGroups);
+        if (this.explorerGroup?.id === id) {
+          this.explorerGroup.thumbnail_path = res.thumbnail_path;
+          this.explorerGroup._ts = ts;
+        }
+        this.toast('Icon refreshed.', 'success');
+      },
       error: (e) => this.toast('Refresh failed: ' + e.message, 'error'),
     });
   }
@@ -785,8 +1112,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // ── Confirm modal ─────────────────────────────────────────────
 
-  private confirmAction(message: string): Promise<boolean> {
+  private confirmAction(message: string, title = 'Confirm Delete', label = 'Delete'): Promise<boolean> {
     this.confirmMessage = message;
+    this.confirmTitle = title;
+    this.confirmLabel = label;
     this.showConfirmModal = true;
     return new Promise((resolve) => { this.confirmResolve = resolve; });
   }

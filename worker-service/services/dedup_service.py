@@ -237,20 +237,30 @@ def extract_dlls_inline(
     root_path: Path,
     shared_dir: str,
     db,
-    progress_callback=None,  # Optional[Callable[[int], None]]  0-100 sub-range
+    progress_callback=None,
 ) -> list[dict]:
-    """Extract DLLs to shared storage only when they are ALSO present in another active game.
+    """Extract DLLs to shared storage based on the existing shared index.
 
-    DLLs unique to this game are left alone â€” they will be included in the game zip as
-    normal files. Only truly shared DLLs go to shared storage.
+    Uses the shared index (index.json) to identify previously-deduped DLLs.
+    This is an O(1) lookup instead of hashing every DLL in every other game group.
+    DLLs not in the shared index are included in the game zip as normal files.
 
-    Returns a list of manifest entry dicts for DLLs that were saved to shared storage.
-    The caller uses this list to:
-      1. Embed it as _dlls.json inside the game zip (for restore).
-      2. Exclude those specific files from the game zip (they live in shared storage).
+    Returns a list of manifest entry dicts for DLLs excluded from the game zip.
     """
     shared_path = Path(shared_dir)
     shared_path.mkdir(parents=True, exist_ok=True)
+
+    # Load the shared index - fast JSON read, no disk scan of other groups
+    with _index_lock:
+        index = _load_index(shared_path)
+
+    # If no DLLs have ever been extracted to shared storage, nothing to do
+    if not index:
+        if progress_callback:
+            progress_callback(100)
+        return []
+
+    known_hashes: set[str] = set(index.keys())
 
     # Collect DLLs in this group
     dll_files: list[dict] = []
@@ -260,49 +270,25 @@ def extract_dlls_inline(
                 dll_files.append({"path": p, "size": p.stat().st_size})
 
     if not dll_files:
+        if progress_callback:
+            progress_callback(100)
         return []
 
-    # Hash DLLs in every OTHER non-archived group to identify truly shared DLLs
-    other_groups = db.query(FileGroup).filter(
-        FileGroup.id != group_id,
-        FileGroup.is_archived.is_(False),
-    ).all()
-    other_hashes: set[str] = set()
-    total_other = len(other_groups)
-    for gi, grp in enumerate(other_groups):
-        if progress_callback:
-            # Report 0-50% for scanning other groups
-            progress_callback(int((gi / max(total_other, 1)) * 50))
-        if not grp.root_path:
-            continue
-        other_root = Path(grp.root_path)
-        if not other_root.exists():
-            continue
-        for p in other_root.rglob("*"):
-            if p.is_file() and p.suffix.lower() in DLL_EXTENSIONS:
-                with contextlib.suppress(OSError):
-                    other_hashes.add(sha256_file(p))
-    if progress_callback:
-        progress_callback(50)
-
-    with _index_lock:
-        index = _load_index(shared_path)
-
     manifest_entries: list[dict] = []
-    extracted = 0
-    skipped_unique = 0
+    total = len(dll_files)
 
-    for f in dll_files:
+    for i, f in enumerate(dll_files):
         orig_path: Path = f["path"]
         dll_name = orig_path.name
+        if progress_callback:
+            progress_callback(int((i + 1) / max(total, 1) * 100))
         try:
             h = sha256_file(orig_path)
         except OSError:
             continue
 
-        # Not shared with any other active game â†’ stays in game zip, not in shared storage
-        if h not in other_hashes:
-            skipped_unique += 1
+        # Not in shared storage - stays in game zip
+        if h not in known_hashes:
             continue
 
         zip_name = f"{h[:12]}_{dll_name}.zip"
@@ -310,7 +296,6 @@ def extract_dlls_inline(
 
         try:
             with db.begin_nested():
-                # Already stored and zip exists â†’ just record in manifest
                 if h in index and Path(index[h]["archive_path"]).exists():
                     manifest_entries.append({
                         "original_path": str(orig_path), "sha256": h, "name": dll_name,
@@ -319,13 +304,11 @@ def extract_dlls_inline(
                     })
                     continue
 
-                # Create zip from the original file
                 if not archive_path.exists():
                     with zipfile.ZipFile(str(archive_path), "w",
                                          compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
                         zf.write(str(orig_path), dll_name)
 
-                # Upsert DedupEntry
                 entry = db.query(DedupEntry).filter(DedupEntry.sha256 == h).first()
                 if not entry:
                     entry = DedupEntry(
@@ -339,7 +322,6 @@ def extract_dlls_inline(
                     db.add(entry)
                     db.flush()
 
-                # Upsert DedupLink
                 existing_link = db.query(DedupLink).filter(
                     DedupLink.linked_path == str(orig_path)
                 ).first()
@@ -359,7 +341,6 @@ def extract_dlls_inline(
                     "name": dll_name, "sha256": h,
                     "size_bytes": f["size"], "archive_path": str(archive_path),
                 }
-                extracted += 1
                 manifest_entries.append({
                     "original_path": str(orig_path), "sha256": h, "name": dll_name,
                     "size_bytes": f["size"], "archive_path": str(archive_path),
@@ -375,10 +356,12 @@ def extract_dlls_inline(
         _save_index(shared_path, index)
 
     logger.info(
-        "DLL extract (archive) group %d: %d shared â†’ shared storage, %d unique â†’ game zip",
-        group_id, extracted, skipped_unique,
+        "DLL extract (archive) group %d: %d DLLs matched shared index",
+        group_id, len(manifest_entries),
     )
     return manifest_entries
+
+
 
 
 def cleanup_orphaned_shared_dlls(group_id: int, shared_dir: str, db) -> int:

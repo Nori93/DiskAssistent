@@ -8,7 +8,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from database.models import FileGroup, FileRecord, get_db
 
@@ -18,29 +18,32 @@ router = APIRouter(prefix="/api/groups", tags=["Groups"])
 @router.get("/")
 def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     """Return all groups, optionally filtered by category."""
-    from sqlalchemy import select
-
-    # Correlated subquery for file count — uses the index on files.group_id
-    file_count_subq = (
-        select(func.count(FileRecord.id))
-        .where(FileRecord.group_id == FileGroup.id)
-        .correlate(FileGroup)
-        .scalar_subquery()
-    )
-
+    # Defer file_tree_json — it can be several MB per group and is not needed for listing.
     q = (
-        db.query(FileGroup, file_count_subq.label("file_count"))
+        db.query(FileGroup)
+        .options(defer(FileGroup.file_tree_json))
         .order_by(FileGroup.name)
     )
     if category:
         q = q.filter(FileGroup.category == category)
+    groups = q.all()
 
-    rows = q.all()
+    # Single aggregated count query instead of N correlated subqueries.
+    counts: dict[int, int] = {}
+    if groups:
+        group_ids = [g.id for g in groups]
+        count_rows = (
+            db.query(FileRecord.group_id, func.count(FileRecord.id))
+            .filter(FileRecord.group_id.in_(group_ids))
+            .group_by(FileRecord.group_id)
+            .all()
+        )
+        counts = {gid: cnt for gid, cnt in count_rows}
 
     result = []
-    for grp, file_count in rows:
+    for grp in groups:
         d = grp.to_dict()
-        d["file_count"] = file_count
+        d["file_count"] = counts.get(grp.id, 0)
         result.append(d)
 
     # Count ungrouped files
@@ -49,9 +52,8 @@ def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     )
     if category:
         ungrouped_q = ungrouped_q.filter(FileRecord.category == category)
-    ungrouped_count = ungrouped_q.scalar() or 0
 
-    return {"groups": result, "ungrouped_count": ungrouped_count}
+    return {"groups": result, "ungrouped_count": ungrouped_q.scalar() or 0}
 
 
 @router.get("/{group_id}")
@@ -160,15 +162,15 @@ def refresh_group_icon(group_id: int, db: Session = Depends(get_db)):
 
     exe = pick_best_exe(db, group_id, grp.root_path)
     if not exe:
-        raise HTTPException(422, "No .exe file found in this group.")
+        return {"thumbnail_path": grp.thumbnail_path, "skipped": True, "reason": "no_exe"}
 
     url = extract_group_icon(group_id, exe)
     if not url:
-        raise HTTPException(422, "Icon extraction failed (Windows only, exe must exist on disk).")
+        return {"thumbnail_path": grp.thumbnail_path, "skipped": True, "reason": "extraction_failed"}
 
     grp.thumbnail_path = url
     db.commit()
-    return {"thumbnail_path": url}
+    return {"thumbnail_path": url, "skipped": False}
 
 
 @router.delete("/{group_id}")
