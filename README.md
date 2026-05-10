@@ -3,7 +3,7 @@
 A full-stack file management web application built with **Angular 18**, **FastAPI**, and **SQLite**.
 Supports Windows and Linux with AI-powered file categorization, background disk scanning, folder grouping, and file operations.
 
-> **Current branch:** `feature/microservices-architecture` — the application has been refactored from a monolith into four independent microservices.
+> **Current branch:** `develop` — the application runs as a hybrid: the Worker Service runs natively on Windows for full filesystem access, while the WebAPI and Frontend can optionally run in Podman containers.
 
 ---
 
@@ -120,12 +120,14 @@ flowchart TB
 
 ### Service Summary
 
-| Service | Folder | Port | Role |
-|---|---|---|---|
-| **Frontend** | `frontend/` | 4200 | Angular 18 SPA — serves the user interface |
-| **WebAPI** | `webapi/` | 8001 | REST API for UI — fast read/write operations |
-| **Worker Service** | `worker-service/` | 8002 | Heavy background tasks (scan, archive, dedup, AI) |
-| **Database Service** | `database-service/` | — | Shared Python package with all SQLAlchemy models |
+| Service | Folder | Port | Run mode | Role |
+|---|---|---|---|---|
+| **Frontend** | `frontend/` | 4200 | Native (ng serve) or Podman container | Angular 18 SPA |
+| **WebAPI** | `webapi/` | 8001 | Native or Podman container | REST API for UI — fast read/write |
+| **Worker Service** | `worker-service/` | 8002 | **Always native** (Windows) | Heavy background tasks (scan, archive, dedup, AI) |
+| **Database Service** | `database-service/` | — | Shared package | All SQLAlchemy models |
+
+> The Worker Service runs natively because it needs direct access to Windows disk drives and the filesystem. In container mode the WebAPI reaches it via `http://host.containers.internal:8002`.
 
 ---
 
@@ -133,11 +135,13 @@ flowchart TB
 
 ### Python services (WebAPI + Worker)
 - Python 3.10+
-- Dependencies listed in each service's `requirements.txt`
+- A virtual environment at `.venv/` is recommended
 
 ### Frontend
 - Node.js 18+ and npm
-- Angular CLI 18 (`npm install -g @angular/cli`)
+
+### Containers (optional)
+- [Podman Desktop](https://podman.io/) with WSL2 backend
 
 ---
 
@@ -148,11 +152,14 @@ git clone https://github.com/Nori93/DiskAssistent.git
 cd DiskAssistent
 ```
 
-**Install Python service dependencies:**
+**Create a virtual environment and install all Python dependencies:**
 
 ```bash
+python -m venv .venv
+.venv\Scripts\activate        # Windows
 pip install -r webapi/requirements.txt
 pip install -r worker-service/requirements.txt
+pip install -e database-service/
 ```
 
 **Install frontend dependencies:**
@@ -167,36 +174,67 @@ cd ..
 
 ## Running All Services
 
-### Option A: VS Code — Compound launch
+### Option A: VS Code — one-click launch (recommended)
 
-Open VS Code and run the **"DiskAssistent — All Services"** compound configuration (`.vscode/launch.json`).
-It starts Worker Service → WebAPI → Frontend in order.
+Open the **Run & Debug** panel (`Ctrl+Shift+D`) and select **"All Services (native dev)"** from the dropdown, then press **F5**.
+
+This runs the VS Code task **"All Services: Start (native)"** which starts all three services in dedicated terminal panels:
+- Worker Service on `:8002` (with `--reload`)
+- WebAPI on `:8001` (with `--reload`)
+- Angular dev server on `:4200`
+
+Then opens Chrome at [http://localhost:4200](http://localhost:4200).
+
+> **Why tasks and not debugpy launch configs?** On Windows, `debugpy` attaches to the Python process via a shared console group. Any console signal (including those from VS Code's task runner) gets broadcast to all processes in that group, causing uvicorn to shut down immediately. Running as plain shell tasks avoids this entirely. To debug with breakpoints, use the individual **"WebAPI"** or **"Worker Service"** launch configs.
 
 ### Option B: Manual terminals
 
-Open three separate terminals:
+Open three separate terminals with the venv activated (`.venv\Scripts\activate`):
 
 **Terminal 1 — Worker Service**
-```bash
+```powershell
 cd worker-service
+$env:PYTHONPATH = "$PWD;$PWD\..\database-service"
 uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
 **Terminal 2 — WebAPI**
-```bash
+```powershell
 cd webapi
+$env:PYTHONPATH = "$PWD;$PWD\..\database-service"
+$env:WORKER_URL = "http://localhost:8002"
 uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 **Terminal 3 — Frontend**
-```bash
+```powershell
 cd frontend
-ng serve --proxy-config proxy.conf.json
+node ./node_modules/@angular/cli/bin/ng serve --proxy-config proxy.conf.json
 ```
 
 Then open your browser at [http://localhost:4200](http://localhost:4200).
 
-The SQLite database (`database/diskassistent.db`) is created automatically on first run by either Python service.
+The SQLite database (`database/diskassistent.db`) is created automatically on first run.
+
+### Option C: Podman containers (WebAPI + Frontend) + native Worker
+
+Run the VS Code task **"Podman: Build & Start"** (builds and starts the `webapi` and `frontend` containers), then start the Worker Service natively as in Option B Terminal 1.
+
+Or use the **"Podman + Worker (native)"** compound in the Run & Debug panel.
+
+```powershell
+# Manually:
+.\podman-up.ps1 -Build          # build + start webapi + frontend containers
+# Worker must run natively (see Terminal 1 above)
+```
+
+Container management:
+```powershell
+.\podman-up.ps1                  # start containers (no rebuild)
+.\podman-up.ps1 -Build           # rebuild + start
+.\podman-up.ps1 -Build -NoStart  # build images only
+.\podman-up.ps1 -Down            # stop and remove containers
+```
 
 ---
 
@@ -209,8 +247,6 @@ git checkout main
 python run.py            # http://localhost:8000
 ```
 
-The `.vscode/launch.json` file also contains a `[Legacy] Monolith` configuration for quick reference.
-
 ---
 
 ## Configuration
@@ -220,10 +256,12 @@ The `.vscode/launch.json` file also contains a `[Legacy] Monolith` configuration
 | Variable | Service | Default | Description |
 |---|---|---|---|
 | `WEBAPI_PORT` | WebAPI | `8001` | Port for WebAPI |
-| `WORKER_URL` | WebAPI | `http://localhost:8002` | Worker Service base URL |
+| `WORKER_URL` | WebAPI | `http://localhost:8002` | Worker Service base URL (set to `http://host.containers.internal:8002` in container mode) |
 | `WORKER_PORT` | Worker | `8002` | Port for Worker Service |
 | `DISKASSISTENT_DB_PATH` | Both | `<repo>/database/diskassistent.db` | SQLite database path |
 | `OPENAI_API_KEY` | Worker | _(unset)_ | Enables OpenAI categorization fallback |
+| `AI_BASE_URL` | Worker | _(unset)_ | Custom OpenAI-compatible API base URL |
+| `AI_MODEL` | Worker | `gpt-3.5-turbo` | Model name for AI categorization |
 
 ---
 
