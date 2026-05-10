@@ -1,0 +1,4 @@
+{
+  "archive_dir": "/mnt/archive",
+  "dedup_shared_dir": "/mnt/shared-dll"
+}
