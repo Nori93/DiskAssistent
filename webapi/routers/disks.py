@@ -1,6 +1,7 @@
 """
 Disk / filesystem API endpoints.
 """
+
 from fastapi import APIRouter, HTTPException
 
 from services.scanner import get_available_disks, get_directory_tree

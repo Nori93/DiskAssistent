@@ -14,8 +14,14 @@ from diskassistent_db.models import FileRecord, get_db
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
 CATEGORIES = [
-    "Games", "Movies", "Music", "Images", "Documents",
-    "Software", "Archives", "Other",
+    "Games",
+    "Movies",
+    "Music",
+    "Images",
+    "Documents",
+    "Software",
+    "Archives",
+    "Other",
 ]
 
 

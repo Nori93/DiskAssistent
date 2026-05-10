@@ -461,4 +461,3 @@ def regroup_from_db(db, root_path: str) -> list[dict]:
         )
 
     return groups
-

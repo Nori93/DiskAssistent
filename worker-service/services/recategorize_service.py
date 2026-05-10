@@ -248,4 +248,3 @@ def _dedupe_roots(paths: list[str]) -> list[str]:
         if not any(p_norm.startswith(r.rstrip(os.sep) + os.sep) and p != r for r in result):
             result.append(p)
     return result
-

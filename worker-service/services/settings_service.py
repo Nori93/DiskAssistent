@@ -1,6 +1,7 @@
 ﻿"""
 Application settings service – persists user preferences in settings.json.
 """
+
 from __future__ import annotations
 
 import json
@@ -11,8 +12,8 @@ from config import logger
 SETTINGS_PATH = Path(__file__).parent.parent.parent / "settings.json"
 
 _DEFAULTS: dict = {
-    "archive_dir": "",       # Path where compressed game archives are stored
-    "dedup_shared_dir": "", # Path where canonical shared DLL copies are stored
+    "archive_dir": "",  # Path where compressed game archives are stored
+    "dedup_shared_dir": "",  # Path where canonical shared DLL copies are stored
 }
 
 
@@ -40,4 +41,3 @@ def save_settings(updates: dict) -> dict:
         logger.error("Could not write settings.json: %s", exc)
         raise
     return settings
-

@@ -68,6 +68,7 @@ app.include_router(groups.router)
 app.include_router(archive.router)
 app.include_router(dedup.router)
 
+
 # ── No-cache middleware for static JS/CSS (dev convenience) ──────────────────
 @app.middleware("http")
 async def no_cache_static(request: Request, call_next):
@@ -83,6 +84,7 @@ async def no_cache_static(request: Request, call_next):
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     from fastapi.responses import RedirectResponse
+
     return RedirectResponse(url="/static/img/favicon.svg")
 
 

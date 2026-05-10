@@ -1,6 +1,7 @@
 """
 WebAPI — configuration.
 """
+
 import logging
 import os
 import platform

@@ -1,6 +1,7 @@
 """
 Archive API — settings + per-group archive / restore endpoints.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/api/archive", tags=["Archive"])
 
 
 # ── Settings ──────────────────────────────────────────────────────────────────
+
 
 @router.get("/settings")
 def get_settings():
@@ -38,10 +40,13 @@ def update_settings(body: SettingsUpdate):
         raise HTTPException(400, "Invalid archive directory path.")
     if dedup_shared_dir and ".." in Path(dedup_shared_dir).parts:
         raise HTTPException(400, "Invalid shared DLL directory path.")
-    return settings_service.save_settings({"archive_dir": archive_dir, "dedup_shared_dir": dedup_shared_dir})
+    return settings_service.save_settings(
+        {"archive_dir": archive_dir, "dedup_shared_dir": dedup_shared_dir}
+    )
 
 
 # ── Archive / Restore ─────────────────────────────────────────────────────────
+
 
 @router.post("/{group_id}/archive")
 def archive_group(group_id: int, db: Session = Depends(get_db)):
@@ -55,9 +60,7 @@ def archive_group(group_id: int, db: Session = Depends(get_db)):
     settings = settings_service.load_settings()
     archive_dir = settings.get("archive_dir", "").strip()
     if not archive_dir:
-        raise HTTPException(
-            400, "Archive directory is not configured. Set it in Settings (⚙)."
-        )
+        raise HTTPException(400, "Archive directory is not configured. Set it in Settings (⚙).")
 
     if archive_service._is_running(group_id):  # noqa: SLF001
         raise HTTPException(409, "An archive/restore job is already running for this group.")
@@ -91,10 +94,5 @@ def archive_status(group_id: int):
 @router.get("/history")
 def archive_history(limit: int = 200, db: Session = Depends(get_db)):
     """Return recent archive / restore job history, newest first."""
-    jobs = (
-        db.query(ArchiveJob)
-        .order_by(ArchiveJob.started_at.desc())
-        .limit(limit)
-        .all()
-    )
+    jobs = db.query(ArchiveJob).order_by(ArchiveJob.started_at.desc()).limit(limit).all()
     return [j.to_dict() for j in jobs]

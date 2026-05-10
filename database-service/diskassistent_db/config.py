@@ -3,6 +3,7 @@ Database configuration for diskassistent_db.
 Reads DB_PATH from the environment variable DISKASSISTENT_DB_PATH,
 defaulting to <repo-root>/database/diskassistent.db.
 """
+
 import logging
 import os
 from pathlib import Path

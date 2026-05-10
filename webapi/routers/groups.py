@@ -21,11 +21,7 @@ router = APIRouter(prefix="/api/groups", tags=["Groups"])
 def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     """Return all groups, optionally filtered by category."""
     # Defer file_tree_json — it can be several MB per group and is not needed for listing.
-    q = (
-        db.query(FileGroup)
-        .options(defer(FileGroup.file_tree_json))
-        .order_by(FileGroup.name)
-    )
+    q = db.query(FileGroup).options(defer(FileGroup.file_tree_json)).order_by(FileGroup.name)
     if category:
         q = q.filter(FileGroup.category == category)
     groups = q.all()
@@ -106,7 +102,7 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
 
     for f in files:
         rel = f.full_path
-        rel = rel[len(root_path):].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
+        rel = rel[len(root_path) :].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
         parts = rel.replace("\\", "/").split("/")
         parts.pop()
 
@@ -181,14 +177,20 @@ def refresh_group_icon(group_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Group not found.")
     try:
         import sys
+
         sys.path.insert(0, str(__file__).split("routers")[0].rstrip("\\/"))
         from backend.services.icon_service import extract_group_icon, pick_best_exe  # type: ignore
+
         exe = pick_best_exe(db, grp.id, grp.root_path)
         if not exe:
             return {"thumbnail_path": grp.thumbnail_path, "skipped": True, "reason": "no_exe"}
         url = extract_group_icon(grp.id, exe)
         if not url:
-            return {"thumbnail_path": grp.thumbnail_path, "skipped": True, "reason": "extraction_failed"}
+            return {
+                "thumbnail_path": grp.thumbnail_path,
+                "skipped": True,
+                "reason": "extraction_failed",
+            }
         grp.thumbnail_path = url
         db.commit()
         return {"thumbnail_path": url, "skipped": False}

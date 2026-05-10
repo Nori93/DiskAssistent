@@ -4,6 +4,7 @@ Archive service: compress game groups to a zip file and restore them later.
 Each operation runs in a daemon thread so the API never blocks.
 Job progress is tracked in-memory (keyed by group_id).
 """
+
 from __future__ import annotations
 
 import datetime
@@ -43,17 +44,18 @@ def _is_running(group_id: int) -> bool:
     # the user can try again instead of getting a permanent 409.
     thread_name_a = f"archive-{group_id}"
     thread_name_r = f"restore-{group_id}"
-    alive = any(
-        t.name in (thread_name_a, thread_name_r)
-        for t in threading.enumerate()
-    )
+    alive = any(t.name in (thread_name_a, thread_name_r) for t in threading.enumerate())
     if not alive:
-        _set_job(group_id, {"status": "error", "progress": 0, "error": "Worker thread died unexpectedly."})
+        _set_job(
+            group_id,
+            {"status": "error", "progress": 0, "error": "Worker thread died unexpectedly."},
+        )
         return False
     return True
 
 
 # â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 def _safe_name(name: str) -> str:
     """Strip characters that are invalid in file names."""
@@ -61,6 +63,7 @@ def _safe_name(name: str) -> str:
 
 
 # â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 def start_archive(group_id: int, archive_dir: str) -> None:
     """Kick off background compression for *group_id*."""
@@ -87,6 +90,7 @@ def start_restore(group_id: int) -> None:
 
 
 # â”€â”€ Workers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 def _archive_worker(group_id: int, archive_dir: str) -> None:
     db = SessionLocal()
@@ -134,26 +138,30 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
         shared_paths_saved: set[Path] = set()
         if shared_dir:
             try:
+
                 def _dll_scan_progress(pct: int) -> None:
                     # Map 0-100 from scan phase â†’ 2-9% overall
                     overall = 2 + int(pct * 7 / 100)
                     _set_job(group_id, {"status": "running", "progress": overall, "error": None})
 
                 dll_manifest = dedup_service.extract_dlls_inline(
-                    group_id, grp.name, root, shared_dir, db,
+                    group_id,
+                    grp.name,
+                    root,
+                    shared_dir,
+                    db,
                     progress_callback=_dll_scan_progress,
                 )
                 # Only exclude the specific files that were actually saved to shared storage
                 shared_paths_saved = {Path(e["original_path"]) for e in dll_manifest}
             except Exception as dll_exc:
-                logger.warning("DLL extraction during archive for group %d failed: %s", group_id, dll_exc)
+                logger.warning(
+                    "DLL extraction during archive for group %d failed: %s", group_id, dll_exc
+                )
 
         # â”€â”€ Step 2: zip game files (unique DLLs included, shared DLLs excluded) + embed manifest â”€â”€
         _set_job(group_id, {"status": "running", "progress": 10, "error": None})
-        all_files = [
-            p for p in root.rglob("*")
-            if p.is_file() and p not in shared_paths_saved
-        ]
+        all_files = [p for p in root.rglob("*") if p.is_file() and p not in shared_paths_saved]
         total = len(all_files)
         logger.info("Archiving group %d (%s): %d files â†’ %s", group_id, grp.name, total, zip_path)
 
@@ -162,7 +170,9 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
             indent=2,
         ).encode("utf-8")
 
-        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+        with zipfile.ZipFile(
+            zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+        ) as zf:
             for i, fp in enumerate(all_files):
                 arcname = fp.relative_to(root.parent)
                 zf.write(fp, arcname)
@@ -185,9 +195,7 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
         grp.archived_at = datetime.datetime.utcnow()
         grp.archive_size_bytes = float(archive_size)
 
-        db.query(FileRecord).filter(FileRecord.group_id == group_id).update(
-            {"is_missing": True}
-        )
+        db.query(FileRecord).filter(FileRecord.group_id == group_id).update({"is_missing": True})
 
         job_row.status = "done"
         job_row.archive_path = str(zip_path)
@@ -196,7 +204,9 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
         db.commit()
 
         _set_job(group_id, {"status": "done", "progress": 100, "error": None})
-        logger.info("Archive done for group %d â†’ %s (%.1f MB)", group_id, zip_path, archive_size / 1e6)
+        logger.info(
+            "Archive done for group %d â†’ %s (%.1f MB)", group_id, zip_path, archive_size / 1e6
+        )
 
         # â”€â”€ Step 5: remove shared DLL zips no longer needed by any active game â”€â”€
         if shared_dir:
@@ -231,7 +241,9 @@ def _restore_worker(group_id: int) -> None:
             return
 
         if not grp.is_archived or not grp.archive_path:
-            _set_job(group_id, {"status": "error", "progress": 0, "error": "Group is not archived."})
+            _set_job(
+                group_id, {"status": "error", "progress": 0, "error": "Group is not archived."}
+            )
             return
 
         # Persist job record
@@ -303,9 +315,13 @@ def _restore_worker(group_id: int) -> None:
                         logger.warning("DLL restore failed for %s: %s", dest, dll_exc)
                     pct = 70 + int((j + 1) / max(total_dlls, 1) * 25)
                     _set_job(group_id, {"status": "running", "progress": pct, "error": None})
-                logger.info("DLL restore for group %d: %d/%d DLLs restored", group_id, restored, total_dlls)
+                logger.info(
+                    "DLL restore for group %d: %d/%d DLLs restored", group_id, restored, total_dlls
+                )
             except Exception as manifest_exc:
-                logger.warning("DLL manifest restore failed for group %d: %s", group_id, manifest_exc)
+                logger.warning(
+                    "DLL manifest restore failed for group %d: %s", group_id, manifest_exc
+                )
 
         # â”€â”€ Step 3: clean up archive zip â”€â”€
         zip_path.unlink()
@@ -316,9 +332,7 @@ def _restore_worker(group_id: int) -> None:
         grp.archived_at = None
         grp.archive_size_bytes = None
 
-        db.query(FileRecord).filter(FileRecord.group_id == group_id).update(
-            {"is_missing": False}
-        )
+        db.query(FileRecord).filter(FileRecord.group_id == group_id).update({"is_missing": False})
 
         job_row.status = "done"
         job_row.finished_at = datetime.datetime.utcnow()
@@ -341,4 +355,3 @@ def _restore_worker(group_id: int) -> None:
                 pass
     finally:
         db.close()
-

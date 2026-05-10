@@ -4,6 +4,7 @@ Serves the Angular frontend's REST API calls on port 8001.
 Heavy processing (scan, archive, dedup, recategorize) is proxied
 to the Worker Service on port 8002.
 """
+
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -89,8 +90,11 @@ async def proxy_to_worker(request: Request, path: str):
             headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
             content=body,
         )
-        return Response(content=resp.content, status_code=resp.status_code,
-                        media_type=resp.headers.get("content-type"))
+        return Response(
+            content=resp.content,
+            status_code=resp.status_code,
+            media_type=resp.headers.get("content-type"),
+        )
     except httpx.ConnectError:
         return JSONResponse(
             {"detail": "Worker Service unavailable. Start worker-service on port 8002."},
@@ -102,6 +106,7 @@ async def proxy_to_worker(request: Request, path: str):
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     from fastapi.responses import RedirectResponse
+
     return RedirectResponse(url="/static/img/favicon.svg")
 
 

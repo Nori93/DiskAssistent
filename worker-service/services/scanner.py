@@ -203,4 +203,3 @@ def _tree_node(path: Path, depth: int) -> list[dict]:
     except PermissionError:
         pass
     return nodes
-

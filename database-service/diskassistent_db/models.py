@@ -249,7 +249,9 @@ class ArchiveJob(Base):
             "status": self.status,
             "archive_path": self.archive_path or "",
             "archive_size_bytes": self.archive_size_bytes,
-            "archive_size_human": _human_size(self.archive_size_bytes or 0) if self.archive_size_bytes else "",
+            "archive_size_human": (
+                _human_size(self.archive_size_bytes or 0) if self.archive_size_bytes else ""
+            ),
             "error_msg": self.error_msg or "",
             "started_at": _fmt_dt(self.started_at),
             "finished_at": _fmt_dt(self.finished_at),

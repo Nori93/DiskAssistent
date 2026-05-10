@@ -19,11 +19,7 @@ router = APIRouter(prefix="/api/groups", tags=["Groups"])
 def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     """Return all groups, optionally filtered by category."""
     # Defer file_tree_json — it can be several MB per group and is not needed for listing.
-    q = (
-        db.query(FileGroup)
-        .options(defer(FileGroup.file_tree_json))
-        .order_by(FileGroup.name)
-    )
+    q = db.query(FileGroup).options(defer(FileGroup.file_tree_json)).order_by(FileGroup.name)
     if category:
         q = q.filter(FileGroup.category == category)
     groups = q.all()
@@ -166,7 +162,11 @@ def refresh_group_icon(group_id: int, db: Session = Depends(get_db)):
 
     url = extract_group_icon(group_id, exe)
     if not url:
-        return {"thumbnail_path": grp.thumbnail_path, "skipped": True, "reason": "extraction_failed"}
+        return {
+            "thumbnail_path": grp.thumbnail_path,
+            "skipped": True,
+            "reason": "extraction_failed",
+        }
 
     grp.thumbnail_path = url
     db.commit()

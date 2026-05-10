@@ -1,6 +1,7 @@
 """
 Application settings service — persists user preferences in settings.json.
 """
+
 from __future__ import annotations
 
 import json

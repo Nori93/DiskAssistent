@@ -117,7 +117,10 @@ def _collect_dlls(groups: list) -> list[dict]:
 def start_analyze(group_ids: list[int] | None = None) -> str:
     """Scan game groups for duplicate DLLs (read-only / dry-run). Returns job_id."""
     job_id = new_job_id()
-    _set_job(job_id, {"status": "running", "phase": "scanning", "progress": 0, "result": None, "error": None})
+    _set_job(
+        job_id,
+        {"status": "running", "phase": "scanning", "progress": 0, "result": None, "error": None},
+    )
     t = threading.Thread(
         target=_analyze_worker,
         args=(job_id, group_ids),
@@ -131,7 +134,10 @@ def start_analyze(group_ids: list[int] | None = None) -> str:
 def start_apply(shared_dir: str, group_ids: list[int] | None = None) -> str:
     """Create hard/symlinks to eliminate duplicate DLLs. Returns job_id."""
     job_id = new_job_id()
-    _set_job(job_id, {"status": "running", "phase": "hashing", "progress": 0, "result": None, "error": None})
+    _set_job(
+        job_id,
+        {"status": "running", "phase": "hashing", "progress": 0, "result": None, "error": None},
+    )
     t = threading.Thread(
         target=_apply_worker,
         args=(job_id, shared_dir, group_ids),
@@ -145,7 +151,10 @@ def start_apply(shared_dir: str, group_ids: list[int] | None = None) -> str:
 def start_restore(group_ids: list[int] | None = None) -> str:
     """Replace all tracked links with real file copies. Returns job_id."""
     job_id = new_job_id()
-    _set_job(job_id, {"status": "running", "phase": "restoring", "progress": 0, "result": None, "error": None})
+    _set_job(
+        job_id,
+        {"status": "running", "phase": "restoring", "progress": 0, "result": None, "error": None},
+    )
     t = threading.Thread(
         target=_restore_worker,
         args=(job_id, group_ids),
@@ -168,7 +177,10 @@ def start_extract_all(shared_dir: str, group_ids: list[int] | None = None) -> st
     Returns job_id.
     """
     job_id = new_job_id()
-    _set_job(job_id, {"status": "running", "phase": "scanning", "progress": 0, "result": None, "error": None})
+    _set_job(
+        job_id,
+        {"status": "running", "phase": "scanning", "progress": 0, "result": None, "error": None},
+    )
     t = threading.Thread(
         target=_extract_all_worker,
         args=(job_id, shared_dir, group_ids),
@@ -213,7 +225,9 @@ def _save_index(shared_path: Path, dlls: dict) -> None:
     tmp.replace(idx_file)
 
 
-def _save_group_manifest(shared_path: Path, group_id: int, group_name: str, entries: list[dict]) -> str:
+def _save_group_manifest(
+    shared_path: Path, group_id: int, group_name: str, entries: list[dict]
+) -> str:
     """Write shared/manifests/{group_id}.json; returns path string."""
     manifests_dir = shared_path / _MANIFESTS_DIR
     manifests_dir.mkdir(exist_ok=True)
@@ -297,16 +311,22 @@ def extract_dlls_inline(
         try:
             with db.begin_nested():
                 if h in index and Path(index[h]["archive_path"]).exists():
-                    manifest_entries.append({
-                        "original_path": str(orig_path), "sha256": h, "name": dll_name,
-                        "size_bytes": f["size"], "archive_path": str(index[h]["archive_path"]),
-                        "link_type": "already_stored",
-                    })
+                    manifest_entries.append(
+                        {
+                            "original_path": str(orig_path),
+                            "sha256": h,
+                            "name": dll_name,
+                            "size_bytes": f["size"],
+                            "archive_path": str(index[h]["archive_path"]),
+                            "link_type": "already_stored",
+                        }
+                    )
                     continue
 
                 if not archive_path.exists():
-                    with zipfile.ZipFile(str(archive_path), "w",
-                                         compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+                    with zipfile.ZipFile(
+                        str(archive_path), "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+                    ) as zf:
                         zf.write(str(orig_path), dll_name)
 
                 entry = db.query(DedupEntry).filter(DedupEntry.sha256 == h).first()
@@ -322,30 +342,39 @@ def extract_dlls_inline(
                     db.add(entry)
                     db.flush()
 
-                existing_link = db.query(DedupLink).filter(
-                    DedupLink.linked_path == str(orig_path)
-                ).first()
+                existing_link = (
+                    db.query(DedupLink).filter(DedupLink.linked_path == str(orig_path)).first()
+                )
                 if existing_link:
                     existing_link.link_type = "archive_copy"
                 else:
-                    db.add(DedupLink(
-                        dedup_entry_id=entry.id,
-                        linked_path=str(orig_path),
-                        group_id=group_id,
-                        link_type="archive_copy",
-                        created_at=datetime.datetime.utcnow(),
-                    ))
+                    db.add(
+                        DedupLink(
+                            dedup_entry_id=entry.id,
+                            linked_path=str(orig_path),
+                            group_id=group_id,
+                            link_type="archive_copy",
+                            created_at=datetime.datetime.utcnow(),
+                        )
+                    )
                     entry.link_count = (entry.link_count or 0) + 1
 
                 index[h] = {
-                    "name": dll_name, "sha256": h,
-                    "size_bytes": f["size"], "archive_path": str(archive_path),
+                    "name": dll_name,
+                    "sha256": h,
+                    "size_bytes": f["size"],
+                    "archive_path": str(archive_path),
                 }
-                manifest_entries.append({
-                    "original_path": str(orig_path), "sha256": h, "name": dll_name,
-                    "size_bytes": f["size"], "archive_path": str(archive_path),
-                    "link_type": "archive_copy",
-                })
+                manifest_entries.append(
+                    {
+                        "original_path": str(orig_path),
+                        "sha256": h,
+                        "name": dll_name,
+                        "size_bytes": f["size"],
+                        "archive_path": str(archive_path),
+                        "link_type": "archive_copy",
+                    }
+                )
 
         except Exception as exc:
             logger.warning("DLL extract (archive) failed for %s: %s", orig_path, exc)
@@ -357,11 +386,10 @@ def extract_dlls_inline(
 
     logger.info(
         "DLL extract (archive) group %d: %d DLLs matched shared index",
-        group_id, len(manifest_entries),
+        group_id,
+        len(manifest_entries),
     )
     return manifest_entries
-
-
 
 
 def cleanup_orphaned_shared_dlls(group_id: int, shared_dir: str, db) -> int:
@@ -417,9 +445,7 @@ def cleanup_orphaned_shared_dlls(group_id: int, shared_dir: str, db) -> int:
 
     if removed:
         db.commit()
-        logger.info(
-            "Removed %d orphaned shared DLL(s) after archiving group %d", removed, group_id
-        )
+        logger.info("Removed %d orphaned shared DLL(s) after archiving group %d", removed, group_id)
     return removed
 
 
@@ -442,14 +468,22 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
         total = len(dll_files)
 
         if not total:
-            _set_job(job_id, {
-                "status": "done", "progress": 100, "phase": "done",
-                "result": {"extracted": 0, "skipped": 0, "saved_bytes": 0, "errors": []},
-                "error": None,
-            })
+            _set_job(
+                job_id,
+                {
+                    "status": "done",
+                    "progress": 100,
+                    "phase": "done",
+                    "result": {"extracted": 0, "skipped": 0, "saved_bytes": 0, "errors": []},
+                    "error": None,
+                },
+            )
             return
 
-        _set_job(job_id, {"status": "running", "phase": "hashing", "progress": 2, "result": None, "error": None})
+        _set_job(
+            job_id,
+            {"status": "running", "phase": "hashing", "progress": 2, "result": None, "error": None},
+        )
 
         # Hash all DLLs
         hashed: list[dict] = []
@@ -461,9 +495,27 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
                 pass
             if i % 20 == 0:
                 pct = 2 + int((i + 1) / total * 48)
-                _set_job(job_id, {"status": "running", "phase": "hashing", "progress": pct, "result": None, "error": None})
+                _set_job(
+                    job_id,
+                    {
+                        "status": "running",
+                        "phase": "hashing",
+                        "progress": pct,
+                        "result": None,
+                        "error": None,
+                    },
+                )
 
-        _set_job(job_id, {"status": "running", "phase": "extracting", "progress": 52, "result": None, "error": None})
+        _set_job(
+            job_id,
+            {
+                "status": "running",
+                "phase": "extracting",
+                "progress": 52,
+                "result": None,
+                "error": None,
+            },
+        )
 
         # Load existing index (thread-safe)
         with _index_lock:
@@ -490,7 +542,16 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
                 done_ops += 1
                 pct = 52 + int(done_ops / max(total_ops, 1) * 44)
                 if done_ops % 10 == 0:
-                    _set_job(job_id, {"status": "running", "phase": "extracting", "progress": pct, "result": None, "error": None})
+                    _set_job(
+                        job_id,
+                        {
+                            "status": "running",
+                            "phase": "extracting",
+                            "progress": pct,
+                            "result": None,
+                            "error": None,
+                        },
+                    )
 
                 h: str = f["hash"]
                 orig_path: Path = f["path"]
@@ -503,14 +564,17 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
                     # Skip if already linked (tracked in DB)
                     if db.query(DedupLink).filter(DedupLink.linked_path == str(orig_path)).first():
                         skipped += 1
-                        manifest_entries.append({
-                            "original_path": str(orig_path),
-                            "sha256": h, "name": dll_name,
-                            "size_bytes": f["size"],
-                            "shared_path": str(canonical),
-                            "archive_path": str(archive_path),
-                            "link_type": "already_linked",
-                        })
+                        manifest_entries.append(
+                            {
+                                "original_path": str(orig_path),
+                                "sha256": h,
+                                "name": dll_name,
+                                "size_bytes": f["size"],
+                                "shared_path": str(canonical),
+                                "archive_path": str(archive_path),
+                                "link_type": "already_linked",
+                            }
+                        )
                         continue
 
                     # Ensure canonical copy exists in shared dir
@@ -541,9 +605,12 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
 
                     # Create zip archive if not already present
                     if not archive_path.exists() and canonical.exists():
-                        with zipfile.ZipFile(str(archive_path), "w",
-                                             compression=zipfile.ZIP_DEFLATED,
-                                             compresslevel=6) as zf:
+                        with zipfile.ZipFile(
+                            str(archive_path),
+                            "w",
+                            compression=zipfile.ZIP_DEFLATED,
+                            compresslevel=6,
+                        ) as zf:
                             zf.write(str(canonical), canonical.name)
 
                     # Update shared index
@@ -593,14 +660,17 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
                     extracted += 1
                     saved_bytes += f["size"]
 
-                    manifest_entries.append({
-                        "original_path": str(orig_path),
-                        "sha256": h, "name": dll_name,
-                        "size_bytes": f["size"],
-                        "shared_path": str(canonical),
-                        "archive_path": str(archive_path),
-                        "link_type": link_type,
-                    })
+                    manifest_entries.append(
+                        {
+                            "original_path": str(orig_path),
+                            "sha256": h,
+                            "name": dll_name,
+                            "size_bytes": f["size"],
+                            "shared_path": str(canonical),
+                            "archive_path": str(archive_path),
+                            "link_type": link_type,
+                        }
+                    )
 
                 except Exception as exc:
                     logger.warning("Extract failed %s: %s", orig_path, exc)
@@ -626,13 +696,24 @@ def _extract_all_worker(job_id: str, shared_dir: str, group_ids: list[int] | Non
             "errors": errors[:30],
             "index_path": str(shared_path / _INDEX_FILE),
         }
-        _set_job(job_id, {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None})
-        logger.info("DLL extract-all: %d extracted, %d skipped, %.1f MB", extracted, skipped, saved_bytes / 1e6)
+        _set_job(
+            job_id,
+            {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None},
+        )
+        logger.info(
+            "DLL extract-all: %d extracted, %d skipped, %.1f MB",
+            extracted,
+            skipped,
+            saved_bytes / 1e6,
+        )
 
     except Exception as exc:
         logger.exception("DLL extract-all failed (job %s)", job_id)
         db.rollback()
-        _set_job(job_id, {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)})
+        _set_job(
+            job_id,
+            {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)},
+        )
     finally:
         db.close()
 
@@ -667,7 +748,10 @@ def _analyze_worker(job_id: str, group_ids: list[int] | None) -> None:
             )
             return
 
-        _set_job(job_id, {"status": "running", "phase": "hashing", "progress": 5, "result": None, "error": None})
+        _set_job(
+            job_id,
+            {"status": "running", "phase": "hashing", "progress": 5, "result": None, "error": None},
+        )
 
         # Hash every file
         hash_map: dict[str, list[dict]] = {}
@@ -679,7 +763,16 @@ def _analyze_worker(job_id: str, group_ids: list[int] | None) -> None:
                 pass
             pct = 5 + int((i + 1) / total * 85)
             if i % 20 == 0:
-                _set_job(job_id, {"status": "running", "phase": "hashing", "progress": pct, "result": None, "error": None})
+                _set_job(
+                    job_id,
+                    {
+                        "status": "running",
+                        "phase": "hashing",
+                        "progress": pct,
+                        "result": None,
+                        "error": None,
+                    },
+                )
 
         # Find hashes with > 1 file
         duplicates = []
@@ -697,7 +790,11 @@ def _analyze_worker(job_id: str, group_ids: list[int] | None) -> None:
                         "count": len(files),
                         "savings_bytes": savings,
                         "files": [
-                            {"path": f["path"], "group_id": f["group_id"], "group_name": f["group_name"]}
+                            {
+                                "path": f["path"],
+                                "group_id": f["group_id"],
+                                "group_name": f["group_name"],
+                            }
                             for f in files
                         ],
                     }
@@ -713,7 +810,10 @@ def _analyze_worker(job_id: str, group_ids: list[int] | None) -> None:
             "duplicates": duplicates[:300],  # cap for response size
         }
 
-        _set_job(job_id, {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None})
+        _set_job(
+            job_id,
+            {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None},
+        )
         logger.info(
             "DLL analyze: %d files, %d dup groups, %.1f MB potential savings",
             total,
@@ -723,7 +823,10 @@ def _analyze_worker(job_id: str, group_ids: list[int] | None) -> None:
 
     except Exception as exc:
         logger.exception("DLL analyze failed (job %s)", job_id)
-        _set_job(job_id, {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)})
+        _set_job(
+            job_id,
+            {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)},
+        )
     finally:
         db.close()
 
@@ -745,11 +848,20 @@ def _apply_worker(job_id: str, shared_dir: str, group_ids: list[int] | None) -> 
         if not total:
             _set_job(
                 job_id,
-                {"status": "done", "progress": 100, "phase": "done", "result": {"linked": 0, "saved_bytes": 0, "errors": []}, "error": None},
+                {
+                    "status": "done",
+                    "progress": 100,
+                    "phase": "done",
+                    "result": {"linked": 0, "saved_bytes": 0, "errors": []},
+                    "error": None,
+                },
             )
             return
 
-        _set_job(job_id, {"status": "running", "phase": "hashing", "progress": 2, "result": None, "error": None})
+        _set_job(
+            job_id,
+            {"status": "running", "phase": "hashing", "progress": 2, "result": None, "error": None},
+        )
 
         # Hash all files
         hash_map: dict[str, list[dict]] = {}
@@ -761,9 +873,27 @@ def _apply_worker(job_id: str, shared_dir: str, group_ids: list[int] | None) -> 
                 pass
             pct = 2 + int((i + 1) / total * 58)
             if i % 20 == 0:
-                _set_job(job_id, {"status": "running", "phase": "hashing", "progress": pct, "result": None, "error": None})
+                _set_job(
+                    job_id,
+                    {
+                        "status": "running",
+                        "phase": "hashing",
+                        "progress": pct,
+                        "result": None,
+                        "error": None,
+                    },
+                )
 
-        _set_job(job_id, {"status": "running", "phase": "linking", "progress": 62, "result": None, "error": None})
+        _set_job(
+            job_id,
+            {
+                "status": "running",
+                "phase": "linking",
+                "progress": 62,
+                "result": None,
+                "error": None,
+            },
+        )
 
         # Only process hashes with actual duplicates
         dup_groups = {h: files for h, files in hash_map.items() if len(files) > 1}
@@ -817,7 +947,16 @@ def _apply_worker(job_id: str, shared_dir: str, group_ids: list[int] | None) -> 
                 orig_path: Path = f["path"]
                 done_ops += 1
                 pct = 62 + int(done_ops / max(total_ops, 1) * 36)
-                _set_job(job_id, {"status": "running", "phase": "linking", "progress": pct, "result": None, "error": None})
+                _set_job(
+                    job_id,
+                    {
+                        "status": "running",
+                        "phase": "linking",
+                        "progress": pct,
+                        "result": None,
+                        "error": None,
+                    },
+                )
 
                 try:
                     # Skip if already tracked
@@ -883,13 +1022,19 @@ def _apply_worker(job_id: str, shared_dir: str, group_ids: list[int] | None) -> 
             "saved_bytes": saved_bytes,
             "errors": errors[:30],
         }
-        _set_job(job_id, {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None})
+        _set_job(
+            job_id,
+            {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None},
+        )
         logger.info("DLL dedup apply: %d links, %.1f MB freed", linked_count, saved_bytes / 1e6)
 
     except Exception as exc:
         logger.exception("DLL dedup apply failed (job %s)", job_id)
         db.rollback()
-        _set_job(job_id, {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)})
+        _set_job(
+            job_id,
+            {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)},
+        )
     finally:
         db.close()
 
@@ -908,7 +1053,16 @@ def _restore_worker(job_id: str, group_ids: list[int] | None) -> None:
 
         for i, link in enumerate(links):
             pct = int((i + 1) / max(total, 1) * 94)
-            _set_job(job_id, {"status": "running", "phase": "restoring", "progress": pct, "result": None, "error": None})
+            _set_job(
+                job_id,
+                {
+                    "status": "running",
+                    "phase": "restoring",
+                    "progress": pct,
+                    "result": None,
+                    "error": None,
+                },
+            )
             try:
                 entry = db.get(DedupEntry, link.dedup_entry_id)
                 if not entry:
@@ -964,13 +1118,19 @@ def _restore_worker(job_id: str, group_ids: list[int] | None) -> None:
                 _save_index(shared_root, cleaned)
 
         result = {"restored": restored, "errors": errors[:30]}
-        _set_job(job_id, {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None})
+        _set_job(
+            job_id,
+            {"status": "done", "progress": 100, "phase": "done", "result": result, "error": None},
+        )
         logger.info("DLL dedup restore: %d files restored", restored)
 
     except Exception as exc:
         logger.exception("DLL dedup restore failed (job %s)", job_id)
         db.rollback()
-        _set_job(job_id, {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)})
+        _set_job(
+            job_id,
+            {"status": "error", "progress": 0, "phase": "error", "result": None, "error": str(exc)},
+        )
     finally:
         db.close()
 
@@ -986,12 +1146,9 @@ def get_db_stats(db) -> dict:
     link_count = db.query(func.count(DedupLink.id)).scalar() or 0
     # saved = sum over all entries of (link_count Ă— size_bytes)
     # because each link represents one copy we avoided
-    saved_raw = (
-        db.query(func.sum(DedupEntry.size_bytes * DedupEntry.link_count)).scalar() or 0
-    )
+    saved_raw = db.query(func.sum(DedupEntry.size_bytes * DedupEntry.link_count)).scalar() or 0
     return {
         "unique_dlls_stored": entry_count,
         "total_links": link_count,
         "saved_bytes": float(saved_raw),
     }
-

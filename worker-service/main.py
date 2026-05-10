@@ -6,6 +6,7 @@ Handles all heavy processing on port 8002:
   - DLL deduplication
   - File recategorization + regrouping
 """
+
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -25,6 +26,7 @@ init_db()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from services.scan_service import resume_interrupted_scans
+
     resume_interrupted_scans()
     logger.info("Worker Service started on port %s", APP_PORT)
     yield

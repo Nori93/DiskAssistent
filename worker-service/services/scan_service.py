@@ -553,4 +553,3 @@ def _mark_missing(db, root_path: str):
         if not Path(rec.full_path).exists():
             rec.is_missing = True
     db.commit()
-

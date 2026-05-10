@@ -1,6 +1,7 @@
 """
 Recategorize & Regroup API endpoints (extracted from the monolith files router).
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException

@@ -1,6 +1,7 @@
 """
 Archive API — settings + per-group archive / restore endpoints.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,7 +34,9 @@ def update_settings(body: SettingsUpdate):
         raise HTTPException(400, "Invalid archive directory path.")
     if dedup_shared_dir and ".." in Path(dedup_shared_dir).parts:
         raise HTTPException(400, "Invalid shared DLL directory path.")
-    return settings_service.save_settings({"archive_dir": archive_dir, "dedup_shared_dir": dedup_shared_dir})
+    return settings_service.save_settings(
+        {"archive_dir": archive_dir, "dedup_shared_dir": dedup_shared_dir}
+    )
 
 
 @router.post("/{group_id}/archive")
