@@ -2,21 +2,7 @@
   "version": "0.2.0",
   "configurations": [
 
-    // ── Legacy monolith (keep for reference / rollback) ─────────────────────
-    {
-      "name": "[Legacy] Monolith: FastAPI (uvicorn --reload)",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": ["main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
-      "cwd": "${workspaceFolder}",
-      "env": { "PYTHONPATH": "${workspaceFolder}" },
-      "console": "integratedTerminal",
-      "jinja": true,
-      "presentation": { "group": "Legacy", "order": 1 }
-    },
-
-    // ── Microservices ───────────────────────────────────────────────────────
+    // ── Individual services ─────────────────────────────────────────────────
     {
       "name": "WebAPI (port 8001, --reload)",
       "type": "debugpy",
@@ -31,7 +17,7 @@
       },
       "console": "integratedTerminal",
       "jinja": true,
-      "presentation": { "group": "DiskAssistent", "order": 2 }
+      "presentation": { "group": "DiskAssistent", "order": 1 }
     },
     {
       "name": "Worker Service (port 8002, --reload)",
@@ -41,28 +27,12 @@
       "args": ["main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"],
       "cwd": "${workspaceFolder}/worker-service",
       "env": {
-        "PYTHONPATH": "${workspaceFolder}/worker-service;${workspaceFolder}/database-service",
+        "PYTHONPATH": "${workspaceFolder}/worker-service;${workspaceFolder}/database-service;${workspaceFolder}",
         "WORKER_PORT": "8002"
       },
       "console": "integratedTerminal",
       "jinja": true,
-      "presentation": { "group": "DiskAssistent", "order": 3 }
-    },
-    {
-      "name": "Host Agent (port 8003, --reload)",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": ["main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"],
-      "cwd": "${workspaceFolder}/host-agent",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}/host-agent",
-        "HOST_AGENT_PORT": "8003",
-        "HOST_AGENT_SECRET": ""
-      },
-      "console": "integratedTerminal",
-      "jinja": true,
-      "presentation": { "group": "DiskAssistent", "order": 4 }
+      "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
       "name": "Frontend: ng serve (port 4200)",
@@ -70,16 +40,14 @@
       "request": "launch",
       "command": "ng serve --proxy-config proxy.conf.json --open",
       "cwd": "${workspaceFolder}/frontend",
-      "presentation": { "group": "DiskAssistent", "order": 5 }
-    },
-
-    // ── Podman (use Terminal → Run Task for Podman operations) ─────────────────
+      "presentation": { "group": "DiskAssistent", "order": 3 }
+    }
 
   ],
 
   "compounds": [
     {
-      "name": "DiskAssistent — All Services",
+      "name": "All Services (native dev)",
       "configurations": [
         "Worker Service (port 8002, --reload)",
         "WebAPI (port 8001, --reload)",
@@ -87,17 +55,6 @@
       ],
       "stopAll": true,
       "presentation": { "group": "DiskAssistent", "order": 1 }
-    },
-    {
-      "name": "DiskAssistent — All Services + Host Agent",
-      "configurations": [
-        "Host Agent (port 8003, --reload)",
-        "Worker Service (port 8002, --reload)",
-        "WebAPI (port 8001, --reload)",
-        "Frontend: ng serve (port 4200)"
-      ],
-      "stopAll": true,
-      "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
       "name": "Podman + Worker (native)",
@@ -110,3 +67,4 @@
     }
   ]
 }
+
