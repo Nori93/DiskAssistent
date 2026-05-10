@@ -8,6 +8,7 @@ and PRs are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## UI / UX
 
+- [x] **Disk sidebar usage stats** — drives show used / free / total and a percentage bar
 - [ ] **Dark / light theme** with preference saved in `localStorage`
 - [ ] **Live stats panel** — pie charts for category usage, file-size histograms, scan timeline
 - [ ] **Treemap view** — visualise disk usage as proportionally sized squares per group/folder
@@ -20,12 +21,18 @@ and PRs are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [ ] **User-trained ML model** — classifier improves over time based on manual overrides
 - [ ] **Auto-tags from metadata** — EXIF (images), ID3 (audio), document headings
-- [ ] **Duplicate detection** — SHA-256 hash comparison with one-click removal
+- [x] **Duplicate detection** — SHA-256 hash comparison for shared DLLs during archiving
 - [ ] **Custom categorization rules** — user-defined rules (e.g. "everything in `Faktury/` → Documents")
 
 ---
 
-## File Operations
+## Archive & Deduplication
+
+- [x] **Archive groups** — compress a game folder to a zip file in a configurable archive directory
+- [x] **Restore / unarchive** — extract back to original location with progress tracking
+- [x] **DLL deduplication** — extract shared DLLs to a shared directory to reduce archive size
+- [ ] **Archive browser** — view and manage all archived groups from the UI
+- [ ] **Scheduled auto-archive** — automatically archive groups that haven’t been accessed in N days
 
 - [ ] **Bulk move / rename** — select multiple files and operate on the whole selection
 - [ ] **Operation history & undo** — every move/rename/delete is logged and reversible

@@ -1,5 +1,5 @@
-/**
- * api.js — thin wrapper around the DiskAssistent REST API.
+﻿/**
+ * api.js ÔÇö thin wrapper around the DiskAssistent REST API.
  * All functions return Promises.
  */
 
@@ -23,17 +23,17 @@ const API = (() => {
   }
 
   return {
-    // ── Disks ──────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Disks ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     getDisks:          ()               => request('GET', '/api/disks/'),
     getTree:           (path, depth=2)  => request('GET', `/api/disks/tree?path=${encodeURIComponent(path)}&depth=${depth}`),
 
-    // ── Scan ───────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Scan ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     startScan:         (path)           => request('POST', '/api/scan/start', { path }),
     getScanStatus:     (jobId)          => request('GET', `/api/scan/status/${jobId}`),
     getActiveScan:     ()               => request('GET', '/api/scan/active'),
     getScanHistory:    ()               => request('GET', '/api/scan/history'),
 
-    // ── Files ──────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Files ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     getFiles:          (params = {})    => {
       const q = new URLSearchParams(params).toString();
       return request('GET', `/api/files/?${q}`);
@@ -49,11 +49,11 @@ const API = (() => {
     cleanup:           ()               => request('POST', '/api/files/cleanup'),
     rescanAll:         ()               => request('POST', '/api/scan/rescan-all'),
 
-    // ── Operations ─────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Operations ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     moveFile:          (fileId, destDir)  => request('POST', '/api/operations/move', { file_id: fileId, dest_dir: destDir }),
     renameFile:        (fileId, newName)  => request('POST', '/api/operations/rename', { file_id: fileId, new_name: newName }),
     deleteFile:        (fileId)           => request('DELETE', '/api/operations/delete', { file_id: fileId, confirm: true }),    openFolder:        (path)             => request('POST', '/api/operations/open-folder', { path }),
-    // ── Groups ─────────────────────────────────────────────────────────
+    // ÔöÇÔöÇ Groups ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     getGroups:         (params = {})    => {
       const q = new URLSearchParams(params).toString();
       return request('GET', `/api/groups/${q ? '?' + q : ''}`);

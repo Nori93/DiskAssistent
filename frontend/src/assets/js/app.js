@@ -1,9 +1,9 @@
-/**
- * app.js — main application logic.
+﻿/**
+ * app.js ÔÇö main application logic.
  * Connects API calls, UI rendering, and user interactions.
  */
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ State ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const STATE = {
   currentCategory: '',      // '' = All Files
   currentGroupId:  null,    // null = not drilling into a group
@@ -18,7 +18,7 @@ const STATE = {
   scanPollTimer:   null,
 };
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Bootstrap ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // All static event listeners are registered at module level further below
 // (safe because this script is loaded at the end of <body>).
 function bindEvents() {}
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isRescanAll) {
         openRescanModal(active.id);
       } else {
-        // Regular directory scan — show the scan modal in progress state
+        // Regular directory scan ÔÇö show the scan modal in progress state
         document.getElementById('scan-path').value = active.root_path || '';
         document.getElementById('scan-progress').classList.remove('hidden');
         document.getElementById('btn-scan-start').disabled = true;
@@ -45,17 +45,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         pollScanJob(active.id);
       }
     }
-  } catch (_) { /* no active scan or network error — that's fine */ }
+  } catch (_) { /* no active scan or network error ÔÇö that's fine */ }
 });
 
-// ── Disk sidebar ──────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Disk sidebar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadDisks() {
   try {
     const disks = await API.getDisks();
     const list  = document.getElementById('disk-list');
     list.innerHTML = disks.map(d => `
       <li class="nav-item" data-path="${d.path}" title="${d.path}">
-        <span class="nav-icon">💾</span>
+        <span class="nav-icon">­čĺż</span>
         <div style="flex:1;min-width:0;">
           <div class="truncate">${d.label}</div>
           <div class="disk-bar-wrap">
@@ -77,7 +77,7 @@ async function loadDisks() {
   }
 }
 
-// ── Categories ────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Categories ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadCategories() {
   try {
     STATE.categories = await API.getCategories();
@@ -107,7 +107,7 @@ async function loadCategories() {
           showView('category');
           loadCategoryGroups(STATE.currentCategory);
         } else {
-          // "All Files" → flat file list
+          // "All Files" Ôćĺ flat file list
           showView('files');
           loadFiles();
         }
@@ -119,11 +119,11 @@ async function loadCategories() {
 }
 
 function catIcon(cat) {
-  const icons = { Games:'🎮', Movies:'🎬', Documents:'📄', Music:'🎵', Images:'🖼️', Software:'⚙️', Other:'📦' };
-  return icons[cat] || '📁';
+  const icons = { Games:'­čÄ«', Movies:'­čÄČ', Documents:'­čôä', Music:'­čÄÁ', Images:'­čľ╝´ŞĆ', Software:'ÔÜÖ´ŞĆ', Other:'­čôŽ' };
+  return icons[cat] || '­čôü';
 }
 
-// ── Load files ────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Load files ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadFiles() {
   const params = {
     limit:  STATE.limit,
@@ -143,12 +143,12 @@ async function loadFiles() {
   }
 }
 
-// ── Category → group tiles view ───────────────────────────────────────────────
+// ÔöÇÔöÇ Category Ôćĺ group tiles view ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadCategoryGroups(category) {
   const grid  = document.getElementById('category-groups-grid');
   const title = document.getElementById('category-view-title');
   title.innerHTML = `${catIcon(category)} ${category}`;
-  grid.innerHTML  = '<p style="color:var(--text-muted)">Loading…</p>';
+  grid.innerHTML  = '<p style="color:var(--text-muted)">LoadingÔÇŽ</p>';
   document.getElementById('category-ungrouped').classList.add('hidden');
   document.getElementById('category-breadcrumb').innerHTML = '';
 
@@ -171,11 +171,11 @@ async function loadCategoryGroups(category) {
           <div class="group-tile" data-gid="${g.id}" data-root="${escHtml(g.root_path)}" title="${escHtml(g.root_path)}">
             <div class="group-tile-thumb">
               ${iconHtml}
-              <button class="group-tile-refresh" title="Refresh icon" onclick="event.stopPropagation();refreshGroupIcon(${g.id},this)">↺</button>
+              <button class="group-tile-refresh" title="Refresh icon" onclick="event.stopPropagation();refreshGroupIcon(${g.id},this)">Ôć║</button>
             </div>
             <div class="group-tile-name">${escHtml(g.name)}</div>
             <div class="group-tile-meta">${g.file_count.toLocaleString()} files</div>
-            <button class="group-tile-open-btn" title="Open in Explorer" onclick="event.stopPropagation();openFolderPath('${escHtml(g.root_path).replace(/'/g, "\\'")}')">📂 Open</button>
+            <button class="group-tile-open-btn" title="Open in Explorer" onclick="event.stopPropagation();openFolderPath('${escHtml(g.root_path).replace(/'/g, "\\'")}')">­čôé Open</button>
           </div>`);
       }
     });
@@ -184,7 +184,7 @@ async function loadCategoryGroups(category) {
     if (ungroupedCount > 0) {
       tiles.push(`
         <div class="group-tile group-tile-ungrouped" data-gid="0" title="Files not assigned to any group">
-          <div class="group-tile-icon">📂</div>
+          <div class="group-tile-icon">­čôé</div>
           <div class="group-tile-name">Ungrouped</div>
           <div class="group-tile-meta">${ungroupedCount.toLocaleString()} files</div>
         </div>`);
@@ -197,7 +197,7 @@ async function loadCategoryGroups(category) {
 
     grid.innerHTML = tiles.join('');
     grid.querySelectorAll('.group-tile').forEach(tile => {
-      // Open-in-Explorer button — read path from data-root to avoid JS escape issues
+      // Open-in-Explorer button ÔÇö read path from data-root to avoid JS escape issues
       const openBtn = tile.querySelector('.group-tile-open-btn');
       if (openBtn) openBtn.addEventListener('click', e => {
         e.stopPropagation();
@@ -227,7 +227,7 @@ async function openFolderPath(path) {
 
 async function refreshGroupIcon(groupId, btn) {
   btn.disabled   = true;
-  btn.textContent = '…';
+  btn.textContent = 'ÔÇŽ';
   try {
     const { thumbnail_path } = await API.refreshGroupIcon(groupId);
     // Update the tile in place
@@ -253,7 +253,7 @@ async function refreshGroupIcon(groupId, btn) {
     toast('Icon refresh failed: ' + err.message, 'error');
   } finally {
     btn.disabled   = false;
-    btn.textContent = '↺';
+    btn.textContent = 'Ôć║';
   }
 }
 
@@ -263,7 +263,7 @@ async function openGroupFiles(groupId, groupName, rootPath) {
 
   // Breadcrumb
   document.getElementById('category-breadcrumb').innerHTML =
-    `<button class="btn btn-sm" id="btn-back-category">← ${escHtml(STATE.currentCategory)}</button>
+    `<button class="btn btn-sm" id="btn-back-category">ÔćÉ ${escHtml(STATE.currentCategory)}</button>
      <span style="color:var(--text-muted)"> / </span>
      <strong>${escHtml(groupName)}</strong>`;
   document.getElementById('btn-back-category').addEventListener('click', () => {
@@ -279,14 +279,14 @@ async function openGroupFiles(groupId, groupName, rootPath) {
 
   const explorerEl = document.getElementById('file-explorer');
   const countEl    = document.getElementById('files-count-cat');
-  explorerEl.innerHTML = '<p class="fe-loading">Loading files…</p>';
+  explorerEl.innerHTML = '<p class="fe-loading">Loading filesÔÇŽ</p>';
   countEl.textContent  = '';
 
   try {
     let tree;
 
     if (groupId === 0) {
-      // Ungrouped files: no cached tree — page all files and build client-side
+      // Ungrouped files: no cached tree ÔÇö page all files and build client-side
       let allFiles = [];
       const limit  = 500;
       let   offset = 0;
@@ -318,7 +318,7 @@ async function openGroupFiles(groupId, groupName, rootPath) {
   }
 }
 
-// ── File-explorer tree helpers ────────────────────────────────────────────────
+// ÔöÇÔöÇ File-explorer tree helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 /**
  * Build a virtual folder tree from a flat list of file records.
@@ -342,13 +342,13 @@ function buildFileTree(files, rootPath) {
     if (clean && rel.toLowerCase().startsWith(clean.toLowerCase())) {
       rel = rel.substring(clean.length).replace(/^[/\\]+/, '');
     } else {
-      // File not under root (ungrouped or different drive) — treat as root-level
+      // File not under root (ungrouped or different drive) ÔÇö treat as root-level
       rel = file.name;
     }
 
     // Split into directory parts; last part is the filename itself
     const parts = rel.split(/[/\\]/);
-    parts.pop(); // remove the file name — only keep the path to its parent
+    parts.pop(); // remove the file name ÔÇö only keep the path to its parent
 
     let node = root;
     for (const part of parts) {
@@ -386,7 +386,7 @@ function renderFileExplorer(container, node, depth) {
   const sortedFiles   = [...node.files]
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
-  // ── Folders ──────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Folders ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   for (const folderName of sortedFolders) {
     const child  = node.children[folderName];
     const fCount = countTreeFiles(child);
@@ -397,16 +397,16 @@ function renderFileExplorer(container, node, depth) {
     row.dataset.open  = '0';
     row.dataset.path  = child.path;
     row.innerHTML =
-      `<span class="fe-chevron">►</span>` +
-      `<span class="fe-icon-folder">📁</span>` +
+      `<span class="fe-chevron">Ôľ║</span>` +
+      `<span class="fe-icon-folder">­čôü</span>` +
       `<span class="fe-name">${escHtml(folderName)}</span>` +
       `<span class="fe-badge">${fCount.toLocaleString()}</span>`;
 
-    // Open button — DOM element so path is never JS-string-escaped
+    // Open button ÔÇö DOM element so path is never JS-string-escaped
     const openBtn = document.createElement('button');
     openBtn.className   = 'fe-open-btn';
     openBtn.title       = 'Open in Explorer';
-    openBtn.textContent = '📂';
+    openBtn.textContent = '­čôé';
     openBtn.addEventListener('click', e => {
       e.stopPropagation();
       openFolderPath(child.path);
@@ -420,7 +420,7 @@ function renderFileExplorer(container, node, depth) {
     row.addEventListener('click', () => {
       const open        = row.dataset.open === '1';
       row.dataset.open  = open ? '0' : '1';
-      row.querySelector('.fe-chevron').textContent = open ? '►' : '▾';
+      row.querySelector('.fe-chevron').textContent = open ? 'Ôľ║' : 'Ôľż';
       content.style.display = open ? 'none' : '';
     });
 
@@ -429,7 +429,7 @@ function renderFileExplorer(container, node, depth) {
     renderFileExplorer(content, child, depth + 1);
   }
 
-  // ── Files ─────────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Files ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   for (const file of sortedFiles) {
     const row     = document.createElement('div');
     row.className = 'fe-row fe-file-row';
@@ -439,8 +439,8 @@ function renderFileExplorer(container, node, depth) {
       `<span class="fe-icon-file">${fileIcon(file.extension)}</span>` +
       `<span class="fe-name fe-file-name" title="${escHtml(file.full_path)}">${escHtml(file.name)}</span>` +
       `<span class="fe-size">${humanSize(file.size_bytes)}</span>` +
-      `<span class="fe-date">${file.modified_at ? new Date(file.modified_at).toLocaleDateString() : '—'}</span>` +
-      `<span class="fe-actions"><button class="btn btn-sm fe-info-btn" title="Details">ℹ</button></span>`;
+      `<span class="fe-date">${file.modified_at ? new Date(file.modified_at).toLocaleDateString() : 'ÔÇö'}</span>` +
+      `<span class="fe-actions"><button class="btn btn-sm fe-info-btn" title="Details">Ôä╣</button></span>`;
 
     row.querySelector('.fe-info-btn').addEventListener('click', e => {
       e.stopPropagation();
@@ -451,7 +451,7 @@ function renderFileExplorer(container, node, depth) {
   }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Render ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function renderFiles(files) {
   const countEl = document.getElementById('files-count');
   if (countEl) countEl.textContent =
@@ -484,12 +484,12 @@ function renderTableIn(tbodyId, files) {
         ${f.is_missing ? '<span class="badge badge-Other" style="font-size:9px">MISSING</span>' : ''}
       </td>
       <td>${categoryBadge(f.category)}</td>
-      <td>${f.extension || '—'}</td>
+      <td>${f.extension || 'ÔÇö'}</td>
       <td>${humanSize(f.size_bytes)}</td>
-      <td>${f.modified_at ? new Date(f.modified_at).toLocaleDateString() : '—'}</td>
+      <td>${f.modified_at ? new Date(f.modified_at).toLocaleDateString() : 'ÔÇö'}</td>
       <td class="cell-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-sm" onclick="openFileDetail(${f.id})">ℹ</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteFileById(${f.id}, '${escHtml(f.name)}')">🗑</button>
+        <button class="btn btn-sm" onclick="openFileDetail(${f.id})">Ôä╣</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteFileById(${f.id}, '${escHtml(f.name)}')">­čŚĹ</button>
       </td>
     </tr>
   `).join('');
@@ -516,7 +516,7 @@ function renderGrid(files) {
       <div class="grid-card-thumb">${fileIcon(f.extension)}</div>
       <div class="grid-card-body">
         <div class="grid-card-name" title="${f.name}">${f.name}</div>
-        <div class="grid-card-meta">${humanSize(f.size_bytes)} · ${categoryBadge(f.category)}</div>
+        <div class="grid-card-meta">${humanSize(f.size_bytes)} ┬Ě ${categoryBadge(f.category)}</div>
       </div>
     </div>
   `).join('');
@@ -526,7 +526,7 @@ function renderGrid(files) {
   });
 }
 
-// ── Pagination ────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Pagination ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function updatePagination() {
   updatePaginationIn('btn-prev', 'btn-next', 'page-info');
 }
@@ -542,7 +542,7 @@ function updatePaginationIn(prevId, nextId, infoId) {
   if (next) next.disabled      = STATE.offset + STATE.limit >= STATE.total;
 }
 
-// ── View switching ────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ View switching ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(`view-${name}`);
@@ -559,7 +559,7 @@ function showView(name) {
   if (name === 'logs')      loadLogsView();
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Dashboard ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadDashboard() {
   try {
     const stats = await API.getStats();
@@ -589,7 +589,7 @@ async function loadDashboard() {
   }
 }
 
-// ── Groups (all-groups view) ──────────────────────────────────────────────────
+// ÔöÇÔöÇ Groups (all-groups view) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadGroups() {
   try {
     const resp   = await API.getGroups();
@@ -608,11 +608,11 @@ async function loadGroups() {
         <div class="group-tile" data-gid="${g.id}" data-root="${escHtml(g.root_path)}" title="${escHtml(g.root_path)}">
           <div class="group-tile-thumb">
             ${iconHtml}
-            <button class="group-tile-refresh" title="Refresh icon">↺</button>
+            <button class="group-tile-refresh" title="Refresh icon">Ôć║</button>
           </div>
           <div class="group-tile-name">${escHtml(g.name)}</div>
-          <div class="group-tile-meta">${categoryBadge(g.category)} · ${(g.file_count || 0).toLocaleString()} files</div>
-          <button class="group-tile-open-btn" title="Open in Explorer">📂 Open</button>
+          <div class="group-tile-meta">${categoryBadge(g.category)} ┬Ě ${(g.file_count || 0).toLocaleString()} files</div>
+          <button class="group-tile-open-btn" title="Open in Explorer">­čôé Open</button>
         </div>`;
     }).join('');
 
@@ -638,7 +638,7 @@ async function loadGroups() {
   }
 }
 
-// ── File detail modal ─────────────────────────────────────────────────────────
+// ÔöÇÔöÇ File detail modal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function openFileDetail(id) {
   try {
     const file = await API.getFile(id);
@@ -715,11 +715,11 @@ async function deleteFileById(id, name) {
   } catch (err) { toast(err.message, 'error'); }
 }
 
-// ── Re-categorize ─────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Re-categorize ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-regroup').addEventListener('click', async () => {
   const btn = document.getElementById('btn-regroup');
   btn.disabled = true;
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="16" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/></svg> Regrouping…`;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="16" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/></svg> RegroupingÔÇŽ`;
   try {
     const { job_id } = await API.startRegroup();
     toast('Regroup started.', 'info');
@@ -762,7 +762,7 @@ function pollRegroup(jobId, btn) {
 document.getElementById('btn-recategorize').addEventListener('click', async () => {
   const btn = document.getElementById('btn-recategorize');
   btn.disabled = true;
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Re-categorizing…`;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Re-categorizingÔÇŽ`;
   try {
     const body = { only_auto: true, regroup: true };
     if (STATE.currentCategory) body.category = STATE.currentCategory;
@@ -808,11 +808,11 @@ function pollRecategorize(jobId, btn) {
   }, 1200);
 }
 
-// ── Cleanup (remove missing files + fix wrong categories) ─────────────────────
+// ÔöÇÔöÇ Cleanup (remove missing files + fix wrong categories) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-cleanup').addEventListener('click', async () => {
   const btn = document.getElementById('btn-cleanup');
   btn.disabled = true;
-  btn.textContent = '⏳';
+  btn.textContent = 'ÔĆ│';
   try {
     const result = await API.cleanup();
     toast(result.message, 'success');
@@ -823,17 +823,17 @@ document.getElementById('btn-cleanup').addEventListener('click', async () => {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '🧹';
+    btn.textContent = '­čž╣';
   }
 });
 
-// ── Rescan all disks ──────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Rescan all disks ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-rescan-all').addEventListener('click', async () => {
   if (!confirm('This will wipe the entire database and rescan all disks from scratch.\nAny manual category overrides will be lost. Continue?')) return;
 
   const btn = document.getElementById('btn-rescan-all');
   btn.disabled = true;
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Scanning…`;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> ScanningÔÇŽ`;
 
   try {
     const { job_id } = await API.rescanAll();
@@ -848,21 +848,21 @@ document.getElementById('btn-rescan-all').addEventListener('click', async () => 
 function openRescanModal(jobId) {
   // Reset modal UI
   document.getElementById('rescan-overall-fill').style.width = '0%';
-  document.getElementById('rescan-overall-label').textContent = 'Counting files…';
+  document.getElementById('rescan-overall-label').textContent = 'Counting filesÔÇŽ';
   document.getElementById('rescan-disk-rows').innerHTML = '';
   document.getElementById('btn-rescan-close').disabled = true;
   openModal('modal-rescan-all');
   pollRescanAll(jobId);
 }
 
-// Sanitize a disk path into a safe HTML id fragment: "C:\" → "C__"
+// Sanitize a disk path into a safe HTML id fragment: "C:\" Ôćĺ "C__"
 function diskSafeId(disk) {
   return disk.replace(/[^a-zA-Z0-9]/g, '_');
 }
 
 function pollRescanAll(jobId) {
-  const DISK_ICONS  = { C: '💿', D: '💾', E: '💾', F: '💾', G: '💾' };
-  const STATUS_LABEL = { pending: 'Waiting…', scanning: 'Scanning…', done: '✓ Done', error: '✗ Error' };
+  const DISK_ICONS  = { C: '­čĺ┐', D: '­čĺż', E: '­čĺż', F: '­čĺż', G: '­čĺż' };
+  const STATUS_LABEL = { pending: 'WaitingÔÇŽ', scanning: 'ScanningÔÇŽ', done: 'Ôťô Done', error: 'ÔťŚ Error' };
 
   let rowsBuilt = false;
   let errorCount = 0;
@@ -874,33 +874,33 @@ function pollRescanAll(jobId) {
       const dp  = (typeof job.disk_progress === 'object' && job.disk_progress !== null)
                   ? job.disk_progress : {};
 
-      // ── Overall bar ───────────────────────────────────────────────
+      // ÔöÇÔöÇ Overall bar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
       document.getElementById('rescan-overall-fill').style.width = pct + '%';
       const cur = job.current_disk;
       if (cur === '__finalizing__') {
         document.getElementById('rescan-overall-label').innerHTML =
-          `<strong>Finalizing groups…</strong> &nbsp;·&nbsp; ${job.processed.toLocaleString()} files indexed`;
+          `<strong>Finalizing groupsÔÇŽ</strong> &nbsp;┬Ě&nbsp; ${job.processed.toLocaleString()} files indexed`;
       } else if (cur) {
         document.getElementById('rescan-overall-label').innerHTML =
-          `<strong>Now scanning:</strong> ${escHtml(cur)} &nbsp;·&nbsp; ${job.processed.toLocaleString()} / ${job.total_files.toLocaleString()} files (${pct}%)`;
+          `<strong>Now scanning:</strong> ${escHtml(cur)} &nbsp;┬Ě&nbsp; ${job.processed.toLocaleString()} / ${job.total_files.toLocaleString()} files (${pct}%)`;
       } else if (job.total_files > 0) {
         document.getElementById('rescan-overall-label').textContent =
           `${job.processed.toLocaleString()} / ${job.total_files.toLocaleString()} files (${pct}%)`;
       }
 
-      // ── Per-disk rows — build once when data arrives ──────────────
+      // ÔöÇÔöÇ Per-disk rows ÔÇö build once when data arrives ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
       const diskList = Object.keys(dp);
       if (diskList.length && !rowsBuilt) {
         rowsBuilt = true;
         const container = document.getElementById('rescan-disk-rows');
         container.innerHTML = diskList.map(disk => {
           const sid  = diskSafeId(disk);
-          const icon = DISK_ICONS[disk[0].toUpperCase()] || '💾';
+          const icon = DISK_ICONS[disk[0].toUpperCase()] || '­čĺż';
           return `
             <div class="rescan-disk-row" id="row-${sid}">
               <div class="rescan-disk-header">
                 <span class="rescan-disk-name">${icon} <strong>${escHtml(disk)}</strong></span>
-                <span class="rescan-status-pending" id="status-${sid}">Waiting…</span>
+                <span class="rescan-status-pending" id="status-${sid}">WaitingÔÇŽ</span>
               </div>
               <div class="rescan-disk-bar-wrap">
                 <div class="rescan-disk-bar-fill" id="fill-${sid}"></div>
@@ -910,7 +910,7 @@ function pollRescanAll(jobId) {
         }).join('');
       }
 
-      // ── Update each disk row ──────────────────────────────────────
+      // ÔöÇÔöÇ Update each disk row ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
       for (const [disk, info] of Object.entries(dp)) {
         const sid      = diskSafeId(disk);
         const fillEl   = document.getElementById('fill-'   + sid);
@@ -928,12 +928,12 @@ function pollRescanAll(jobId) {
         countEl.textContent      = `${(info.processed || 0).toLocaleString()} / ${(info.total || 0).toLocaleString()} files`;
       }
 
-      // ── Terminal states ───────────────────────────────────────────
+      // ÔöÇÔöÇ Terminal states ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
       if (job.status === 'done') {
         clearInterval(STATE.scanPollTimer);
         document.getElementById('rescan-overall-fill').style.width = '100%';
         document.getElementById('rescan-overall-label').textContent =
-          `Done — ${job.processed.toLocaleString()} files indexed across ${diskList.length} disk(s).`;
+          `Done ÔÇö ${job.processed.toLocaleString()} files indexed across ${diskList.length} disk(s).`;
         document.getElementById('btn-rescan-close').disabled = false;
         toast('Rescan complete!', 'success');
         loadFiles(); loadDisks(); loadCategories();
@@ -953,7 +953,7 @@ function pollRescanAll(jobId) {
       console.warn('pollRescanAll error #' + errorCount + ':', err);
       if (errorCount >= 5) {
         clearInterval(STATE.scanPollTimer);
-        document.getElementById('rescan-overall-label').textContent = 'Polling failed — check console.';
+        document.getElementById('rescan-overall-label').textContent = 'Polling failed ÔÇö check console.';
         document.getElementById('btn-rescan-close').disabled = false;
       }
     }
@@ -965,7 +965,7 @@ document.getElementById('btn-rescan-close').addEventListener('click', () => {
   closeModal('modal-rescan-all');
 });
 
-// ── Scan modal ────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Scan modal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-scan').addEventListener('click', () => {
   openModal('modal-scan');
 });
@@ -1020,7 +1020,7 @@ function pollScanJob(jobId) {
   }, 1500);
 }
 
-// ── Search ────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Search ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 let searchTimer;
 document.getElementById('search-input').addEventListener('input', e => {
   clearTimeout(searchTimer);
@@ -1031,7 +1031,7 @@ document.getElementById('search-input').addEventListener('input', e => {
   }, 350);
 });
 
-// ── Pagination buttons ────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Pagination buttons ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-prev').addEventListener('click', () => {
   STATE.offset = Math.max(0, STATE.offset - STATE.limit);
   loadFiles();
@@ -1053,7 +1053,7 @@ document.addEventListener('click', e => {
   }
 });
 
-// ── View mode toggle ──────────────────────────────────────────────────────────
+// ÔöÇÔöÇ View mode toggle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-list-view').addEventListener('click', () => {
   STATE.viewMode = 'list';
   document.getElementById('btn-list-view').classList.add('active');
@@ -1067,15 +1067,15 @@ document.getElementById('btn-grid-view').addEventListener('click', () => {
   loadFiles();
 });
 
-// ── Sidebar view navigation ───────────────────────────────────────────────────
+// ÔöÇÔöÇ Sidebar view navigation ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.querySelectorAll('[data-view]').forEach(el => {
   el.addEventListener('click', () => showView(el.dataset.view));
 });
 
-// ── File modal close ──────────────────────────────────────────────────────────
+// ÔöÇÔöÇ File modal close ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('btn-file-close').addEventListener('click', () => closeModal('modal-file'));
 
-// ── Drag & drop file moving ───────────────────────────────────────────────────
+// ÔöÇÔöÇ Drag & drop file moving ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 document.getElementById('file-tbody').addEventListener('dragover', e => {
   e.preventDefault();
   e.currentTarget.classList.add('drop-target');
@@ -1097,10 +1097,10 @@ document.getElementById('file-tbody').addEventListener('drop', async e => {
   } catch (err) { toast(err.message, 'error'); }
 });
 
-// ── Logs view ─────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Logs view ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function loadLogsView() {
   const container = document.getElementById('logs-list');
-  container.innerHTML = '<p style="color:var(--text-muted)">Loading…</p>';
+  container.innerHTML = '<p style="color:var(--text-muted)">LoadingÔÇŽ</p>';
 
   try {
     const [scanJobs, recatJobs] = await Promise.all([
@@ -1137,8 +1137,8 @@ async function loadLogsView() {
 function renderLogEntry(e) {
   const isScan  = e._type === 'scan';
   const badge   = isScan
-    ? `<span class="log-badge log-badge-scan">🔍 Scan</span>`
-    : `<span class="log-badge log-badge-recat">🏷 Re-cat</span>`;
+    ? `<span class="log-badge log-badge-scan">­čöŹ Scan</span>`
+    : `<span class="log-badge log-badge-recat">­čĆĚ Re-cat</span>`;
 
   // Scope / path label
   const scope = isScan
@@ -1147,7 +1147,7 @@ function renderLogEntry(e) {
 
   // Status badge
   const statusCls = `log-status log-status-${e.status}`;
-  const statusLabel = { pending: 'Pending', running: 'Running…', done: 'Done', error: 'Error' }[e.status] || e.status;
+  const statusLabel = { pending: 'Pending', running: 'RunningÔÇŽ', done: 'Done', error: 'Error' }[e.status] || e.status;
   const statusBadge = `<span class="${statusCls}">${statusLabel}</span>`;
 
   // Duration
@@ -1157,7 +1157,7 @@ function renderLogEntry(e) {
     else if (e.duration_sec < 3600) dur = `${Math.floor(e.duration_sec/60)}m ${Math.round(e.duration_sec%60)}s`;
     else                            dur = `${Math.floor(e.duration_sec/3600)}h ${Math.floor((e.duration_sec%3600)/60)}m`;
   } else if (e.status === 'running') {
-    dur = '…';
+    dur = 'ÔÇŽ';
   }
 
   // Progress bar
@@ -1192,13 +1192,13 @@ function renderLogEntry(e) {
       ${statusBadge}
       <span class="log-duration">${dur}</span>
       ${bar}
-      <div class="log-meta">${meta}<span>${e.started_at ? e.started_at.replace('T', ' ').slice(0, 19) : '—'}</span></div>
+      <div class="log-meta">${meta}<span>${e.started_at ? e.started_at.replace('T', ' ').slice(0, 19) : 'ÔÇö'}</span></div>
     </div>`;
 }
 
 document.getElementById('btn-logs-refresh').addEventListener('click', loadLogsView);
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }

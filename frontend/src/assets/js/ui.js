@@ -1,8 +1,8 @@
-/**
- * ui.js — reusable UI helpers (toast, modal, badges, charts, etc.)
+﻿/**
+ * ui.js ÔÇö reusable UI helpers (toast, modal, badges, charts, etc.)
  */
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Toast ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function toast(msg, type = 'info', duration = 3500) {
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
@@ -12,35 +12,35 @@ function toast(msg, type = 'info', duration = 3500) {
   setTimeout(() => el.remove(), duration);
 }
 
-// ── Modal helpers ─────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Modal helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-// ── Category badge ─────────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Category badge ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function categoryBadge(cat) {
   return `<span class="badge badge-${cat}">${cat}</span>`;
 }
 
-// ── File icon by extension ────────────────────────────────────────────────────
+// ÔöÇÔöÇ File icon by extension ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 const EXT_ICONS = {
   // Video
-  mp4: '🎬', mkv: '🎬', avi: '🎬', mov: '🎬', wmv: '🎬', webm: '🎬',
+  mp4: '­čÄČ', mkv: '­čÄČ', avi: '­čÄČ', mov: '­čÄČ', wmv: '­čÄČ', webm: '­čÄČ',
   // Audio
-  mp3: '🎵', flac: '🎵', wav: '🎵', aac: '🎵', ogg: '🎵',
+  mp3: '­čÄÁ', flac: '­čÄÁ', wav: '­čÄÁ', aac: '­čÄÁ', ogg: '­čÄÁ',
   // Images
-  jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', webp: '🖼️', svg: '🖼️',
+  jpg: '­čľ╝´ŞĆ', jpeg: '­čľ╝´ŞĆ', png: '­čľ╝´ŞĆ', gif: '­čľ╝´ŞĆ', webp: '­čľ╝´ŞĆ', svg: '­čľ╝´ŞĆ',
   // Docs
-  pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📑', pptx: '📑', txt: '📄', md: '📄',
+  pdf: '­čôä', doc: '­čôŁ', docx: '­čôŁ', xls: '­čôŐ', xlsx: '­čôŐ', ppt: '­čôĹ', pptx: '­čôĹ', txt: '­čôä', md: '­čôä',
   // Executables
-  exe: '⚙️', msi: '⚙️', iso: '💿', zip: '📦', rar: '📦', '7z': '📦',
+  exe: 'ÔÜÖ´ŞĆ', msi: 'ÔÜÖ´ŞĆ', iso: '­čĺ┐', zip: '­čôŽ', rar: '­čôŽ', '7z': '­čôŽ',
 };
 
 function fileIcon(extension) {
   const ext = (extension || '').replace('.', '').toLowerCase();
-  return EXT_ICONS[ext] || '📄';
+  return EXT_ICONS[ext] || '­čôä';
 }
 
-// ── Human-readable size ───────────────────────────────────────────────────────
+// ÔöÇÔöÇ Human-readable size ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function humanSize(bytes) {
   if (!bytes) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -49,13 +49,13 @@ function humanSize(bytes) {
   return `${bytes.toFixed(1)} ${units[i]}`;
 }
 
-// ── Date formatting ───────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Date formatting ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function fmtDate(isoStr) {
-  if (!isoStr) return '—';
+  if (!isoStr) return 'ÔÇö';
   return new Date(isoStr).toLocaleString();
 }
 
-// ── Simple horizontal bar chart ───────────────────────────────────────────────
+// ÔöÇÔöÇ Simple horizontal bar chart ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function renderBarChart(containerId, data, labelKey, valueKey, colorVar = '--accent') {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -71,7 +71,7 @@ function renderBarChart(containerId, data, labelKey, valueKey, colorVar = '--acc
   `).join('');
 }
 
-// ── Confirmation promise ──────────────────────────────────────────────────────
+// ÔöÇÔöÇ Confirmation promise ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function confirmAction(message) {
   return new Promise(resolve => {
     document.getElementById('confirm-msg').textContent = message;
@@ -93,7 +93,7 @@ function confirmAction(message) {
   });
 }
 
-// ── File detail modal content ─────────────────────────────────────────────────
+// ÔöÇÔöÇ File detail modal content ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 function renderFileDetail(file, categories) {
   const catOptions = categories.map(c =>
     `<option value="${c}" ${c === file.category ? 'selected' : ''}>${c}</option>`
@@ -115,7 +115,7 @@ function renderFileDetail(file, categories) {
 
       <div class="detail-item">
         <label>Extension</label>
-        <p>${file.extension || '—'}</p>
+        <p>${file.extension || 'ÔÇö'}</p>
       </div>
 
       <div class="detail-item">
@@ -149,7 +149,7 @@ function renderFileDetail(file, categories) {
       <button class="btn btn-primary" id="detail-save" data-id="${file.id}">Save Changes</button>
       <button class="btn" id="detail-rename" data-id="${file.id}" data-name="${file.name}">Rename</button>
       <button class="btn" id="detail-move" data-id="${file.id}">Move</button>
-      <button class="btn" id="detail-open-folder" data-path="${file.parent_dir}">📂 Open Folder</button>
+      <button class="btn" id="detail-open-folder" data-path="${file.parent_dir}">­čôé Open Folder</button>
       <button class="btn btn-danger" id="detail-delete" data-id="${file.id}">Delete</button>
     </div>
   `;

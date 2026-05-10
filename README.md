@@ -1,7 +1,413 @@
 # DiskAssistent
 
-A full-stack file management web application built with **FastAPI**, **SQLite**, and **Vanilla JS**.
-Supports Windows and Linux with AI-powered file categorization, background disk scanning, folder grouping, and drag-and-drop file operations.
+A full-stack file management web application built with **Angular 18**, **FastAPI**, and **SQLite**.
+Supports Windows and Linux with AI-powered file categorization, background disk scanning, folder grouping, and file operations.
+
+> **Current branch:** `feature/microservices-architecture` — the application has been refactored from a monolith into four independent microservices.
+
+---
+
+## Features
+
+- **Disk overview** — lists all available drives/mount points with free/used space
+- **Background scanning** — recursive filesystem scan runs as a background job with live progress polling
+- **AI categorization** — files are automatically categorized into Games, Movies, Documents, Music, Images, Software, or Other using a three-tier strategy:
+  1. Rule-based heuristics (extension + path keywords)
+  2. scikit-learn TF-IDF + Logistic Regression classifier (local, no API key required)
+  3. OpenAI API fallback (optional, requires `OPENAI_API_KEY`)
+- **File operations** — move, rename, and delete files with safety checks
+- **Folder groups** — related folders are automatically detected and grouped
+- **Archiving & deduplication** — archive groups and find duplicate files
+- **Scan history** — keeps a log of all past scan jobs
+- **Cross-platform** — works on Windows and Linux
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Browser["🌐 Browser"]
+        SPA["Angular 18 SPA\napp.component.ts"]
+        API_SVC["api.service.ts\nHTTP client"]
+        SPA --> API_SVC
+    end
+
+    subgraph WebAPI["⚡ WebAPI — FastAPI webapi/ :8001"]
+        W_DISKS["routers/disks.py\n/api/disks/"]
+        W_FILES["routers/files.py\n/api/files/"]
+        W_GROUPS["routers/groups.py\n/api/groups/"]
+        W_OPS["routers/operations.py\n/api/operations/"]
+        W_PROXY["Reverse Proxy\n/api/scan /api/archive /api/dedup"]
+    end
+
+    subgraph Worker["⚙️ Worker Service — FastAPI worker-service/ :8002"]
+        WK_SCAN["routers/scan.py\n/api/scan/"]
+        WK_ARCHIVE["routers/archive.py\n/api/archive/"]
+        WK_DEDUP["routers/dedup.py\n/api/dedup/"]
+        WK_RECAT["routers/recategorize.py\n/api/files/recategorize"]
+    end
+
+    subgraph WorkerSvc["🔧 Worker Services"]
+        SVC_SCAN["scan_service.py\nBackground scan worker"]
+        SVC_SCANNER["scanner.py\nFilesystem walker"]
+        SVC_GROUPER["grouper.py\nGroup detection"]
+        SVC_ARCHIVE["archive_service.py\nzip + restore"]
+        SVC_DEDUP["dedup_service.py\nShared DLL index"]
+        SVC_RECAT["recategorize_service.py\nAI re-label worker"]
+        SVC_ICON["icon_service.py\nIcon extraction"]
+        SVC_FILE_OPS["file_ops.py\nMove / rename / delete"]
+        EXECUTOR["ThreadPoolExecutor\nmax_workers=1"]
+    end
+
+    subgraph AI["🤖 AI Categorization ai/"]
+        AI_RULES["Rule-based heuristics\nextension + path keywords"]
+        AI_ML["TF-IDF + LogisticRegression\nscikit-learn"]
+        AI_LLM["OpenAI API fallback\noptional OPENAI_API_KEY"]
+        AI_RULES --> AI_ML --> AI_LLM
+    end
+
+    subgraph DbPkg["📦 Database Service database-service/"]
+        MODELS["diskassistent_db/models.py\nFileRecord · FileGroup · ScanJob\nArchiveJob · RecategorizeJob"]
+    end
+
+    subgraph Data["🗄️ Storage"]
+        DB[("SQLite\ndatabase/diskassistent.db")]
+        FS["Local filesystem\ndisk drives"]
+        THUMBS["frontend/static/img/thumbnails/\nPNG icons"]
+        ZIPSTORE["Archive directory\nconfigurable"]
+        SHARED["Shared DLL directory\nconfigurable"]
+    end
+
+    API_SVC -->|"HTTP REST /api/*"| WebAPI
+    W_PROXY -->|"HTTP :8002"| Worker
+
+    W_DISKS --> SVC_SCANNER
+    W_FILES --> DbPkg
+    W_GROUPS --> DbPkg
+    W_OPS --> SVC_FILE_OPS
+
+    WK_SCAN --> SVC_SCAN
+    WK_ARCHIVE --> SVC_ARCHIVE
+    WK_DEDUP --> SVC_DEDUP
+    WK_RECAT --> SVC_RECAT
+
+    SVC_SCAN --> EXECUTOR
+    SVC_ARCHIVE --> EXECUTOR
+    SVC_RECAT --> EXECUTOR
+
+    SVC_SCAN --> SVC_SCANNER
+    SVC_SCAN --> SVC_GROUPER
+    SVC_SCAN --> SVC_ICON
+    SVC_RECAT --> SVC_GROUPER
+
+    SVC_SCANNER --> AI
+    SVC_RECAT --> AI
+
+    SVC_SCAN --> DbPkg
+    SVC_ARCHIVE --> DbPkg
+    SVC_DEDUP --> DbPkg
+    SVC_RECAT --> DbPkg
+    SVC_FILE_OPS --> DbPkg
+
+    DbPkg --> DB
+    SVC_SCANNER --> FS
+    SVC_FILE_OPS --> FS
+    SVC_ICON -->|"PowerShell .exe to PNG"| THUMBS
+    SVC_ARCHIVE --> ZIPSTORE
+    SVC_DEDUP --> SHARED
+```
+
+### Service Summary
+
+| Service | Folder | Port | Role |
+|---|---|---|---|
+| **Frontend** | `frontend/` | 4200 | Angular 18 SPA — serves the user interface |
+| **WebAPI** | `webapi/` | 8001 | REST API for UI — fast read/write operations |
+| **Worker Service** | `worker-service/` | 8002 | Heavy background tasks (scan, archive, dedup, AI) |
+| **Database Service** | `database-service/` | — | Shared Python package with all SQLAlchemy models |
+
+---
+
+## Requirements
+
+### Python services (WebAPI + Worker)
+- Python 3.10+
+- Dependencies listed in each service's `requirements.txt`
+
+### Frontend
+- Node.js 18+ and npm
+- Angular CLI 18 (`npm install -g @angular/cli`)
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/Nori93/DiskAssistent.git
+cd DiskAssistent
+```
+
+**Install Python service dependencies:**
+
+```bash
+pip install -r webapi/requirements.txt
+pip install -r worker-service/requirements.txt
+```
+
+**Install frontend dependencies:**
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+---
+
+## Running All Services
+
+### Option A: VS Code — Compound launch
+
+Open VS Code and run the **"DiskAssistent — All Services"** compound configuration (`.vscode/launch.json`).
+It starts Worker Service → WebAPI → Frontend in order.
+
+### Option B: Manual terminals
+
+Open three separate terminals:
+
+**Terminal 1 — Worker Service**
+```bash
+cd worker-service
+uvicorn main:app --host 0.0.0.0 --port 8002 --reload
+```
+
+**Terminal 2 — WebAPI**
+```bash
+cd webapi
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+**Terminal 3 — Frontend**
+```bash
+cd frontend
+ng serve --proxy-config proxy.conf.json
+```
+
+Then open your browser at [http://localhost:4200](http://localhost:4200).
+
+The SQLite database (`database/diskassistent.db`) is created automatically on first run by either Python service.
+
+---
+
+## Legacy Monolith
+
+The original single-process version is still available on the `main` branch:
+
+```bash
+git checkout main
+python run.py            # http://localhost:8000
+```
+
+The `.vscode/launch.json` file also contains a `[Legacy] Monolith` configuration for quick reference.
+
+---
+
+## Configuration
+
+### Environment variables
+
+| Variable | Service | Default | Description |
+|---|---|---|---|
+| `WEBAPI_PORT` | WebAPI | `8001` | Port for WebAPI |
+| `WORKER_URL` | WebAPI | `http://localhost:8002` | Worker Service base URL |
+| `WORKER_PORT` | Worker | `8002` | Port for Worker Service |
+| `DISKASSISTENT_DB_PATH` | Both | `<repo>/database/diskassistent.db` | SQLite database path |
+| `OPENAI_API_KEY` | Worker | _(unset)_ | Enables OpenAI categorization fallback |
+
+---
+
+## Project Structure
+
+```
+DiskAssistent/
+│
+├── database-service/           ← Shared Python package (diskassistent-db)
+│   └── diskassistent_db/
+│       ├── config.py           ← DB path + logger
+│       └── models.py           ← All SQLAlchemy models & init_db()
+│
+├── webapi/                     ← FastAPI — port 8001
+│   ├── main.py                 ← App entry point + proxy to Worker
+│   ├── config.py               ← Port, WORKER_URL, logging
+│   ├── requirements.txt
+│   ├── routers/
+│   │   ├── disks.py            ← GET /api/disks/
+│   │   ├── files.py            ← GET/PATCH /api/files/
+│   │   ├── groups.py           ← GET/PATCH /api/groups/
+│   │   └── operations.py       ← POST /api/operations/{move,rename,delete}
+│   └── services/
+│       ├── scanner.py          ← Disk listing + directory tree
+│       ├── file_ops.py         ← Move / rename / delete
+│       └── settings_service.py ← Load / save settings.json
+│
+├── worker-service/             ← FastAPI — port 8002
+│   ├── main.py                 ← App entry point + resume interrupted scans
+│   ├── config.py               ← Port, logging
+│   ├── requirements.txt
+│   ├── routers/
+│   │   ├── scan.py             ← POST /api/scan/start, GET /api/scan/status/{id}
+│   │   ├── archive.py          ← POST /api/archive/{id}/archive, /restore
+│   │   ├── dedup.py            ← POST /api/dedup/analyze, /apply
+│   │   └── recategorize.py     ← POST /api/files/recategorize
+│   ├── services/               ← Heavy processing workers
+│   │   ├── scan_service.py
+│   │   ├── archive_service.py
+│   │   ├── dedup_service.py
+│   │   ├── recategorize_service.py
+│   │   ├── grouper.py
+│   │   ├── scanner.py
+│   │   └── settings_service.py
+│   └── ai/
+│       └── categorizer.py      ← Rule-based + ML + optional OpenAI
+│
+├── frontend/                   ← Angular 18 SPA — port 4200
+│   ├── proxy.conf.json         ← /api → http://localhost:8001
+│   ├── src/app/
+│   │   ├── app.routes.ts
+│   │   ├── app.config.ts
+│   │   ├── services/
+│   │   │   └── api.service.ts  ← Typed HTTP client for all endpoints
+│   │   └── components/
+│   │       ├── dashboard/
+│   │       ├── disk-list/
+│   │       ├── file-browser/
+│   │       ├── groups/
+│   │       ├── settings/
+│   │       └── sidebar/
+│   └── angular.json
+│
+├── database/
+│   └── diskassistent.db        ← Auto-created SQLite database
+│
+├── logs/
+│   ├── webapi.log
+│   └── worker.log
+│
+├── settings.json               ← Archive/dedup directory settings
+│
+│   ── Legacy monolith (main branch) ──
+├── main.py
+├── run.py
+├── requirements.txt
+├── backend/
+├── ai/
+└── frontend/ (old Jinja2/vanilla JS)
+```
+
+---
+
+## API Reference
+
+All endpoints are served by the WebAPI on port 8001. Heavy operations are transparently proxied to the Worker Service on port 8002.
+
+### Disks
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/disks/` | List disks with usage info |
+| GET | `/api/disks/tree?path=…` | Folder tree |
+
+### Scan (proxied to Worker)
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/scan/start` | Start background scan job |
+| GET | `/api/scan/status/{id}` | Poll scan progress |
+| GET | `/api/scan/active` | Currently running scan |
+| GET | `/api/scan/history` | 50 most recent scan jobs |
+| POST | `/api/scan/rescan-all` | Wipe DB and rescan all disks |
+
+### Files
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/files/` | List/search/filter files |
+| GET | `/api/files/stats` | Aggregate statistics |
+| GET | `/api/files/{id}` | Single file detail |
+| PATCH | `/api/files/{id}` | Update category/tags/desc |
+| POST | `/api/files/recategorize` | Re-run AI categorization |
+| POST | `/api/files/cleanup` | Remove missing file records |
+
+### Groups
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/groups/` | List detected folder groups |
+| GET | `/api/groups/{id}` | Group detail with files |
+| PATCH | `/api/groups/{id}` | Update group metadata |
+| DELETE | `/api/groups/{id}` | Delete a group |
+
+### Operations
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/operations/move` | Move a file |
+| POST | `/api/operations/rename` | Rename a file |
+| DELETE | `/api/operations/delete` | Delete a file (confirm=true) |
+| POST | `/api/operations/open-folder` | Open folder in OS explorer |
+
+### Archive (proxied to Worker)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/archive/settings` | Get archive/dedup settings |
+| PUT | `/api/archive/settings` | Update settings |
+| POST | `/api/archive/{id}/archive` | Archive a group |
+| POST | `/api/archive/{id}/restore` | Restore an archived group |
+| GET | `/api/archive/{id}/status` | Archive job status |
+
+### Dedup (proxied to Worker)
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/dedup/analyze` | Find duplicate files |
+| POST | `/api/dedup/apply` | Apply deduplication (hardlinks) |
+| POST | `/api/dedup/restore` | Restore originals |
+| GET | `/api/dedup/stats` | Dedup space savings |
+
+Interactive API docs: `http://localhost:8001/docs` (WebAPI) · `http://localhost:8002/docs` (Worker)
+
+---
+
+## 🤖 AI Categorization
+
+Files are categorized using a 3-tier system:
+
+1. **Rule-based heuristics** — extension + keyword matching (always runs, no deps)
+2. **scikit-learn classifier** — TF-IDF + Logistic Regression trained on synthetic data (runs locally)
+3. **OpenAI fallback** — only when `OPENAI_API_KEY` is set
+
+Users can manually override any category from the file detail view.
+
+---
+
+## 🖥️ Cross-Platform Notes
+
+- On **Windows**: disk list is built from Windows drive letters (A–Z).
+- On **Linux/macOS**: disk list uses `psutil.disk_partitions()`.
+- File paths use `pathlib.Path` throughout, so separators are handled automatically.
+
+---
+
+## 🔒 Security Notes
+
+- File operations require explicit confirmation from the client.
+- Delete endpoint requires `confirm: true` in the request body.
+- File names are sanitised before rename operations.
+- System directories (Windows, System32, /proc, /sys, etc.) are skipped during scanning.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for full text.
+
+If you use DiskAssistent in a commercial product or organisation, we'd love to hear about it — drop us a message at **[norbert.wieczorek.93@gmail.com](mailto:norbert.wieczorek.93@gmail.com)**. It's not required, just appreciated.
+
 
 ---
 

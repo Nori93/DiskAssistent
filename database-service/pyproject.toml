@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "diskassistent-db"
+version = "1.0.0"
+description = "Shared SQLAlchemy models for DiskAssistent microservices"
+requires-python = ">=3.10"
+dependencies = ["sqlalchemy>=2.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["diskassistent_db*"]

@@ -1,0 +1,23 @@
+<section class="page-content">
+  <h1>Groups</h1>
+  <div class="filters">
+    <select [(ngModel)]="category" (change)="load()">
+      <option value="">All categories</option>
+      @for (cat of categories; track cat) {
+        <option [value]="cat">{{ cat }}</option>
+      }
+    </select>
+  </div>
+  <div class="groups-grid">
+    @for (group of groups; track group.id) {
+      <div class="group-card">
+        <h3>{{ group.name }}</h3>
+        <p>{{ group.category }}</p>
+        <p>{{ group.file_count }} files</p>
+      </div>
+    } @empty {
+      <p>No groups found.</p>
+    }
+  </div>
+</section>
+
