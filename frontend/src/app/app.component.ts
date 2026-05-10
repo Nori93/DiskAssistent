@@ -35,11 +35,20 @@ interface FlatNode {
     <div class="sidebar-section-title">Disks</div>
     <ul class="nav-list">
       @for (disk of disks; track disk.path) {
-        <li class="nav-item" [class.active]="activeDiskPath === disk.path" (click)="selectDisk(disk)">
+        <li class="nav-item disk-nav-item" [class.active]="activeDiskPath === disk.path" (click)="selectDisk(disk)">
           <span class="nav-icon">💾</span>
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{disk.label || disk.path}}</span>
-          <div class="disk-bar-wrap">
-            <div class="disk-bar"><div class="disk-bar-fill" [style.width.%]="disk.percent"></div></div>
+          <div class="disk-nav-info">
+            <div class="disk-nav-top">
+              <span class="disk-nav-label">{{disk.label || disk.path}}</span>
+              <span class="disk-nav-pct" [class.disk-pct-warn]="disk.pct_used > 85">{{disk.pct_used}}%</span>
+            </div>
+            <div class="disk-bar">
+              <div class="disk-bar-fill" [class.disk-bar-warn]="disk.pct_used > 85" [style.width.%]="disk.pct_used"></div>
+            </div>
+            <div class="disk-nav-bottom">
+              <span>{{disk.used_human}} used</span>
+              <span>{{disk.free_human}} free / {{disk.total_human}}</span>
+            </div>
           </div>
         </li>
       }

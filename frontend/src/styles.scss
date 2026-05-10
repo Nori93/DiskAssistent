@@ -124,15 +124,33 @@ input, textarea, select { font-family: var(--font); }
 .nav-icon { font-size: 15px; flex-shrink: 0; }
 
 /* Disk usage bar inside nav item */
-.disk-bar-wrap { flex: 1; margin-left: 4px; }
+.disk-nav-item { align-items: flex-start !important; white-space: normal !important; overflow: visible !important; }
+.disk-nav-info { flex: 1; min-width: 0; }
+.disk-nav-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.disk-nav-label { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.disk-nav-pct { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.disk-pct-warn { color: #e07070 !important; font-weight: 600; }
 .disk-bar {
-  height: 3px;
+  height: 4px;
   background: var(--border);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 4px;
+  margin: 4px 0;
 }
-.disk-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; }
+.disk-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
+.disk-bar-warn { background: #e07070 !important; }
+.disk-nav-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  gap: 4px;
+}
 
 /* ÔöÇÔöÇ Main ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
 #main {
