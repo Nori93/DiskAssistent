@@ -38,7 +38,7 @@
       "name": "Frontend: ng serve (port 4200)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "ng serve --proxy-config proxy.conf.json --open",
+      "command": "npx ng serve --proxy-config proxy.conf.json --open",
       "cwd": "${workspaceFolder}/frontend",
       "presentation": { "group": "DiskAssistent", "order": 3 }
     }
