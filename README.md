@@ -25,37 +25,102 @@ Supports Windows and Linux with AI-powered file categorization, background disk 
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Browser                                                        │
-│  Angular 18 SPA  ──  http://localhost:4200                      │
-│  (frontend/)                                                    │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ HTTP + proxy /api → :8001
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  WebAPI  ──  FastAPI  ──  http://localhost:8001                 │
-│  (webapi/)                                                      │
-│  • Handles: disks, files, groups, operations                    │
-│  • Proxies heavy tasks → Worker Service                         │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ HTTP → :8002
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Worker Service  ──  FastAPI  ──  http://localhost:8002         │
-│  (worker-service/)                                              │
-│  • Handles: scan, archive, dedup, recategorize                  │
-│  • AI categorization (scikit-learn / OpenAI)                    │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ SQLAlchemy
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Database Service  ──  Shared Python package                    │
-│  (database-service/)                                            │
-│  • Package: diskassistent-db                                    │
-│  • SQLite: database/diskassistent.db                            │
-│  • All SQLAlchemy models & init_db()                            │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Browser["🌐 Browser"]
+        direction TB
+        SPA["Angular 18 SPA\napp.component.ts"]
+        API_SVC["api.service.ts\nHTTP client"]
+        SPA --> API_SVC
+    end
+
+    subgraph WebAPI["⚡ WebAPI — FastAPI (webapi/) :8001"]
+        direction TB
+        W_DISKS["routers/disks.py\n/api/disks/"]
+        W_FILES["routers/files.py\n/api/files/"]
+        W_GROUPS["routers/groups.py\n/api/groups/"]
+        W_OPS["routers/operations.py\n/api/operations/"]
+        W_PROXY["Reverse Proxy\n/api/scan, /api/archive, /api/dedup"]
+    end
+
+    subgraph Worker["⚙️ Worker Service — FastAPI (worker-service/) :8002"]
+        direction TB
+        WK_SCAN["routers/scan.py\n/api/scan/"]
+        WK_ARCHIVE["routers/archive.py\n/api/archive/"]
+        WK_DEDUP["routers/dedup.py\n/api/dedup/"]
+        WK_RECAT["routers/recategorize.py\n/api/files/recategorize"]
+    end
+
+    subgraph WorkerSvc["🔧 Worker Services"]
+        direction TB
+        SVC_SCAN["scan_service.py\nBackground scan worker"]
+        SVC_SCANNER["scanner.py\nFilesystem walker"]
+        SVC_GROUPER["grouper.py\nGroup detection"]
+        SVC_ARCHIVE["archive_service.py\nzip + restore"]
+        SVC_DEDUP["dedup_service.py\nShared DLL index"]
+        SVC_RECAT["recategorize_service.py\nAI re-label worker"]
+        SVC_ICON["icon_service.py\nIcon extraction"]
+        SVC_FILE_OPS["file_ops.py\nMove / rename / delete"]
+        EXECUTOR["ThreadPoolExecutor\nmax_workers=1"]
+    end
+
+    subgraph AI["🤖 AI Categorization (ai/)"]
+        AI_RULES["Rule-based heuristics\n(extension + path keywords)"]
+        AI_ML["TF-IDF + LogisticRegression\n(scikit-learn)"]
+        AI_LLM["OpenAI API fallback\n(optional — OPENAI_API_KEY)"]
+        AI_RULES --> AI_ML --> AI_LLM
+    end
+
+    subgraph DbPkg["📦 Database Service (database-service/)"]
+        MODELS["diskassistent_db/models.py\nFileRecord · FileGroup · ScanJob\nArchiveJob · RecategorizeJob"]
+    end
+
+    subgraph Data["🗄️ Storage"]
+        DB[("SQLite\ndatabase/diskassistent.db")]
+        FS["Local filesystem\n(disk drives)"]
+        THUMBS["frontend/static/img/thumbnails/\nPNG icons"]
+        SETTINGS["settings.json\narchive_dir · dedup_shared_dir"]
+        SHARED["Shared DLL directory\n(configurable)"]
+        ZIPSTORE["Archive directory\n(configurable)"]
+    end
+
+    API_SVC -->|"HTTP REST /api/*"| WebAPI
+    W_PROXY -->|"HTTP → :8002"| Worker
+
+    W_DISKS --> SVC_SCANNER
+    W_FILES --> DbPkg
+    W_GROUPS --> DbPkg
+    W_OPS --> SVC_FILE_OPS
+
+    WK_SCAN --> SVC_SCAN
+    WK_ARCHIVE --> SVC_ARCHIVE
+    WK_DEDUP --> SVC_DEDUP
+    WK_RECAT --> SVC_RECAT
+
+    SVC_SCAN --> EXECUTOR
+    SVC_ARCHIVE --> EXECUTOR
+    SVC_RECAT --> EXECUTOR
+
+    SVC_SCAN --> SVC_SCANNER
+    SVC_SCAN --> SVC_GROUPER
+    SVC_SCAN --> SVC_ICON
+    SVC_RECAT --> SVC_GROUPER
+
+    SVC_SCANNER --> AI
+    SVC_RECAT --> AI
+
+    SVC_SCAN --> DbPkg
+    SVC_ARCHIVE --> DbPkg
+    SVC_DEDUP --> DbPkg
+    SVC_RECAT --> DbPkg
+    SVC_FILE_OPS --> DbPkg
+
+    DbPkg --> DB
+    SVC_SCANNER --> FS
+    SVC_FILE_OPS --> FS
+    SVC_ICON -->|"PowerShell .exe → PNG"| THUMBS
+    SVC_ARCHIVE --> ZIPSTORE
+    SVC_DEDUP --> SHARED
 ```
 
 ### Service Summary
