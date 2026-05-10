@@ -1,10 +1,10 @@
-﻿from pathlib import Path
+﻿from __future__ import annotations
 """
-Application settings service â€” persists user preferences in settings.json.
+Application settings service – persists user preferences in settings.json.
 """
-from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from config import BASE_DIR, logger
 

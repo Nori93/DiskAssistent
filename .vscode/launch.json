@@ -46,13 +46,10 @@
     },
     {
       "name": "Frontend: ng serve (port 4200)",
-      "type": "node",
+      "type": "node-terminal",
       "request": "launch",
-      "program": "${workspaceFolder}/frontend/node_modules/@angular/cli/bin/ng.js",
-      "args": ["serve", "--proxy-config", "proxy.conf.json"],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal",
-      "autoAttachChildProcesses": true
+      "command": "ng serve --proxy-config proxy.conf.json --open",
+      "cwd": "${workspaceFolder}/frontend"
     }
   ],
 
