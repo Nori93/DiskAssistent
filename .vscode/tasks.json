@@ -2,7 +2,22 @@
   "version": "2.0.0",
   "tasks": [
 
-    // ── Podman ─────────────────────────────────────────────────────────────
+    // ── Worker Service (native Windows) ───────────────────────────────────
+    {
+      "label": "Worker: Start (native)",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"],
+      "options": {
+        "cwd": "${workspaceFolder}/worker-service",
+        "env": { "PYTHONPATH": "${workspaceFolder}/worker-service;${workspaceFolder}/database-service;${workspaceFolder}" }
+      },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Podman (webapi + frontend containers) ───────────────────────────
     {
       "label": "Podman: Build All Images",
       "type": "shell",
@@ -12,6 +27,56 @@
       "presentation": { "reveal": "always", "panel": "shared", "clear": true },
       "problemMatcher": []
     },
+    {
+      "label": "Podman: Build & Start",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\podman-up.ps1", "-Build"],
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Podman: Start",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\podman-up.ps1"],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Podman: Stop",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}\\podman-up.ps1", "-Down"],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Frontend ───────────────────────────────────────────────────────
+    {
+      "label": "Frontend: npm install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: ng build (production)",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build", "--", "--configuration", "production"],
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": ["$tsc"]
+    }
+
+  ]
+}
+
     {
       "label": "Podman: Build & Start",
       "type": "shell",

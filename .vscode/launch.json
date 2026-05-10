@@ -100,9 +100,9 @@
       "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
-      "name": "Podman + Host Agent (native)",
+      "name": "Podman + Worker (native)",
       "configurations": [
-        "Host Agent (port 8003, --reload)"
+        "Worker Service (port 8002, --reload)"
       ],
       "preLaunchTask": "Podman: Build & Start",
       "stopAll": true,

@@ -40,6 +40,8 @@ APP_HOST = os.getenv("WEBAPI_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("WEBAPI_PORT", "8001"))
 
 # Worker service base URL (for proxying heavy operations)
+# Default points to the native worker running on the host (container mode).
+# In dev mode (no container) it falls back to localhost.
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8002")
 
 # Host Agent URL — set when running in a container so filesystem operations

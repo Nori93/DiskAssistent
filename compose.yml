@@ -20,28 +20,9 @@
 
 services:
 
-  # ── Worker Service (heavy ops: scan, archive, dedup, AI) ────────────────────
-  worker:
-    build:
-      context: .
-      dockerfile: Containerfile.worker
-    ports:
-      - "8002:8002"
-    environment:
-      WORKER_HOST: "0.0.0.0"
-      WORKER_PORT: "8002"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-      # Host Agent — containers reach the host via host.containers.internal
-      HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host.containers.internal:8003}"
-      HOST_AGENT_SECRET: "${HOST_AGENT_SECRET:-}"
-    volumes:
-      - shared-db:/app/database
-      - shared-logs:/app/logs
-      - shared-thumbs:/app/frontend/static/img/thumbnails
-      - ./settings.container.json:/app/settings.json:ro
-    restart: unless-stopped
-
   # ── WebAPI (REST API for the frontend) ──────────────────────────────────────
+  # Worker-service runs NATIVELY on Windows for full filesystem access.
+  # Webapi reaches the native worker via host.containers.internal:8002.
   webapi:
     build:
       context: .
@@ -51,16 +32,13 @@ services:
     environment:
       WEBAPI_HOST: "0.0.0.0"
       WEBAPI_PORT: "8001"
-      WORKER_URL: "http://worker:8002"
-      HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host.containers.internal:8003}"
+      WORKER_URL: "http://host.containers.internal:8002"
       HOST_AGENT_SECRET: "${HOST_AGENT_SECRET:-}"
     volumes:
       - shared-db:/app/database
       - shared-logs:/app/logs
       - shared-thumbs:/app/frontend/static/img/thumbnails
       - ./settings.container.json:/app/settings.json:ro
-    depends_on:
-      - worker
     restart: unless-stopped
 
   # ── Frontend (Angular 18 built + served by nginx) ───────────────────────────
