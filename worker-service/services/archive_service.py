@@ -15,8 +15,8 @@ import zipfile
 from pathlib import Path
 
 from config import logger
-from services import dedup_service, settings_service
 from diskassistent_db.models import ArchiveJob, FileGroup, FileRecord, SessionLocal
+from services import dedup_service, settings_service
 
 # â”€â”€ In-memory job registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # { group_id: {"status": "idle|running|done|error", "progress": 0-100, "error": str|None} }

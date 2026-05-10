@@ -15,7 +15,6 @@ import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from config import APP_PORT, APP_TITLE, APP_VERSION, WORKER_URL, logger
 from diskassistent_db.models import init_db

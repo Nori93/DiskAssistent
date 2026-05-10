@@ -51,8 +51,8 @@ def recategorize_history():
 @router.post("/regroup")
 def regroup():
     """Rebuild all groups from current DB records."""
-    from services.grouper import build_groups
     from diskassistent_db.models import SessionLocal
+    from services.grouper import build_groups
 
     db = SessionLocal()
     try:

@@ -5,12 +5,9 @@ File system scanning service — disk listing and directory tree.
 
 from __future__ import annotations
 
-import datetime
-import os
-from collections.abc import Iterator
 from pathlib import Path
 
-from config import IS_WINDOWS, logger
+from config import IS_WINDOWS
 
 
 def get_available_disks() -> list[dict]:

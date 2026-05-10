@@ -38,7 +38,7 @@ def list_groups(category: str | None = None, db: Session = Depends(get_db)):
             .group_by(FileRecord.group_id)
             .all()
         )
-        counts = {gid: cnt for gid, cnt in count_rows}
+        counts = dict(count_rows)
 
     result = []
     for grp in groups:

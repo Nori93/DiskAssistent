@@ -40,10 +40,16 @@ target-version = "py310"
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
 ignore = ["E501"]   # line length handled by formatter
 
+[tool.ruff.lint.isort]
+# Tell ruff which packages are local so it can correctly group/separate imports
+known-first-party = ["diskassistent_db", "config", "services", "ai", "backend"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 # FastAPI uses Depends() in function defaults by design — suppress false positives
 "backend/routers/*.py" = ["B008"]
+"webapi/routers/*.py" = ["B008"]
+"worker-service/routers/*.py" = ["B008"]
 
 # ── Black ─────────────────────────────────────────────────────────────────────
 

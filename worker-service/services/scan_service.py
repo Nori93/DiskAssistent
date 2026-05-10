@@ -13,8 +13,8 @@ from pathlib import Path
 
 from ai.categorizer import categorize
 from config import logger
-from services.scanner import scan_directory
 from diskassistent_db.models import FileGroup, FileRecord, ScanJob, SessionLocal
+from services.scanner import scan_directory
 
 # Single-worker executor so scans are serialized and don't overload disk I/O
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="scanner")

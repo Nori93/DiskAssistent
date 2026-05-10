@@ -40,7 +40,7 @@ def list_groups(category: str | None = None, db: Session = Depends(get_db)):
             .group_by(FileRecord.group_id)
             .all()
         )
-        counts = {gid: cnt for gid, cnt in count_rows}
+        counts = dict(count_rows)
 
     result = []
     for grp in groups:
@@ -193,4 +193,4 @@ def refresh_group_icon(group_id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"thumbnail_path": url, "skipped": False}
     except ImportError:
-        raise HTTPException(501, "Icon service not available.")
+        raise HTTPException(501, "Icon service not available.") from None

@@ -1,12 +1,12 @@
-﻿from __future__ import annotations
-"""
+﻿"""
 Application settings service – persists user preferences in settings.json.
 """
+from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from config import BASE_DIR, logger
+from config import logger
 
 SETTINGS_PATH = Path(__file__).parent.parent.parent / "settings.json"
 
