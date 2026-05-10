@@ -14,7 +14,8 @@ COPY ai/ ai/
 # Copy service
 COPY worker-service/ worker-service/
 
-# Install dependencies
+# Install shared DB package first, then service dependencies
+RUN pip install --no-cache-dir ./database-service
 RUN pip install --no-cache-dir -r worker-service/requirements.txt
 
 # Create required directories

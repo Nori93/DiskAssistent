@@ -1,4 +1,4 @@
-name: diskassistent
+﻿name: diskassistent
 
 # ── Architecture ──────────────────────────────────────────────────────────────
 #
@@ -13,8 +13,8 @@ name: diskassistent
 #   1. Install and start the Host Agent on the host OS:
 #        Windows: python host-agent/install_service.py install
 #        Linux:   sudo python host-agent/install_service.py install
-#   2. Set HOST_AGENT_SECRET below (must match the agent's secret).
-#   3. Edit settings.container.json with Linux-style paths if needed.
+#   2. Set HOST_AGENT_SECRET below (must match the agent secret).
+#   3. Edit settings.container.json with host-side absolute paths.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -35,15 +35,10 @@ services:
       HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host.containers.internal:8003}"
       HOST_AGENT_SECRET: "${HOST_AGENT_SECRET:-}"
     volumes:
-      # Shared SQLite database
       - shared-db:/app/database
-      # Shared logs
       - shared-logs:/app/logs
-      # Shared thumbnails cache
       - shared-thumbs:/app/frontend/static/img/thumbnails
-      # Container settings (uses host-side paths — edit settings.container.json)
       - ./settings.container.json:/app/settings.json:ro
-    # No drive bind-mounts needed — the Host Agent provides filesystem access.
     restart: unless-stopped
 
   # ── WebAPI (REST API for the frontend) ──────────────────────────────────────
@@ -59,74 +54,6 @@ services:
       WORKER_URL: "http://worker:8002"
       HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host.containers.internal:8003}"
       HOST_AGENT_SECRET: "${HOST_AGENT_SECRET:-}"
-    volumes:
-      - shared-db:/app/database
-      - shared-logs:/app/logs
-      - shared-thumbs:/app/frontend/static/img/thumbnails
-      - ./settings.container.json:/app/settings.json:ro
-    depends_on:
-      - worker
-    restart: unless-stopped
-
-  # ── Frontend (Angular 18 built + served by nginx) ───────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: Containerfile.frontend
-    ports:
-      - "4200:80"
-    depends_on:
-      - webapi
-    restart: unless-stopped
-
-volumes:
-  shared-db:
-  shared-logs:
-  shared-thumbs:
-
-
-  # ── Worker Service (heavy ops: scan, archive, dedup, AI) ────────────────────
-  worker:
-    build:
-      context: .
-      dockerfile: Containerfile.worker
-    ports:
-      - "8002:8002"
-    environment:
-      WORKER_HOST: "0.0.0.0"
-      WORKER_PORT: "8002"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-    volumes:
-      # Shared SQLite database
-      - shared-db:/app/database
-      # Shared logs
-      - shared-logs:/app/logs
-      # Shared thumbnails cache
-      - shared-thumbs:/app/frontend/static/img/thumbnails
-      # Container settings (uses Linux paths — edit settings.container.json, not settings.json)
-      - ./settings.container.json:/app/settings.json:ro
-      # ── Bind-mount your disk drives here for scanning ─────────────────────
-      # Uncomment and adjust to the drives you want scanned.
-      # Example Windows drive via WSL or Podman Desktop on Windows:
-      # - /mnt/c:/mnt/c:ro
-      # - /mnt/d:/mnt/d:ro
-      #
-      # Archive / dedup output directories (must match paths in settings.json)
-      # - /mnt/e/Archive:/mnt/e/Archive
-      # - /mnt/e/SharedDLL:/mnt/e/SharedDLL
-    restart: unless-stopped
-
-  # ── WebAPI (REST API for the frontend) ──────────────────────────────────────
-  webapi:
-    build:
-      context: .
-      dockerfile: Containerfile.webapi
-    ports:
-      - "8001:8001"
-    environment:
-      WEBAPI_HOST: "0.0.0.0"
-      WEBAPI_PORT: "8001"
-      WORKER_URL: "http://worker:8002"
     volumes:
       - shared-db:/app/database
       - shared-logs:/app/logs
