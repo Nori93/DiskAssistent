@@ -78,7 +78,7 @@
       "name": "Podman: up --build",
       "type": "node-terminal",
       "request": "launch",
-      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml up --build",
+      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1 -Build",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 1 }
     },
@@ -86,7 +86,7 @@
       "name": "Podman: up (no rebuild)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml up",
+      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 2 }
     },
@@ -94,7 +94,7 @@
       "name": "Podman: down",
       "type": "node-terminal",
       "request": "launch",
-      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml down",
+      "command": "powershell -ExecutionPolicy Bypass -File podman-up.ps1 -Down",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 3 }
     }
