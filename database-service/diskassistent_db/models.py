@@ -1,5 +1,6 @@
 """
 Database models and ORM layer using SQLAlchemy + SQLite.
+Shared package used by both webapi and worker-service.
 """
 
 from __future__ import annotations
@@ -21,30 +22,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from backend.config import DB_PATH, logger
+from diskassistent_db.config import DB_PATH, logger
 
 # ── Engine & Session ──────────────────────────────────────────────────────────
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 engine = create_engine(
     DATABASE_URL,
-    # NullPool: every Session gets its own fresh SQLite connection that is
-    # closed (not pooled) when the session closes.  This eliminates the
-    # SQLITE_LOCKED intra-process contention that pooled connections cause
-    # when multiple threads each hold an open implicit transaction.
     connect_args={"check_same_thread": False, "timeout": 60},
     poolclass=NullPool,
     echo=False,
 )
 
 
-# Enable WAL mode for SQLite for better concurrency
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, _connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA busy_timeout=60000")  # 60 s wait before SQLITE_BUSY
-    cursor.execute("PRAGMA synchronous=NORMAL")  # safe with WAL, much faster than FULL
+    cursor.execute("PRAGMA busy_timeout=60000")
+    cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
@@ -86,21 +82,14 @@ class FileRecord(Base):
     modified_at = Column(DateTime, nullable=True)
     scanned_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    # Categorization
     category = Column(String(64), default="Other", index=True)
     ai_category = Column(String(64), default="Other")
-    category_overridden = Column(Boolean, default=False)  # True = user set manually
-    tags = Column(Text, default="")  # comma-separated tags
+    category_overridden = Column(Boolean, default=False)
+    tags = Column(Text, default="")
     description = Column(Text, default="")
-
-    # Preview
     thumbnail_path = Column(Text, default="")
-
-    # Group membership
     group_id = Column(Integer, nullable=True, index=True)
-
-    # Status
-    is_missing = Column(Boolean, default=False)  # file no longer on disk
+    is_missing = Column(Boolean, default=False)
 
     def to_dict(self) -> dict:
         return {
@@ -137,9 +126,7 @@ class FileGroup(Base):
     description = Column(Text, default="")
     thumbnail_path = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    # Cached file-tree JSON (built lazily, invalidated on rescan/regroup)
     file_tree_json = Column(Text, nullable=True)
-    # Archive fields
     is_archived = Column(Boolean, default=False)
     archive_path = Column(Text, nullable=True)
     archived_at = Column(DateTime, nullable=True)
@@ -163,21 +150,18 @@ class FileGroup(Base):
 
 
 class ScanJob(Base):
-    """Tracks scanning jobs for progress reporting."""
-
     __tablename__ = "scan_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
     root_path = Column(Text, nullable=False)
-    status = Column(String(32), default="pending")  # pending|running|done|error
+    status = Column(String(32), default="pending")
     total_files = Column(Integer, default=0)
     processed = Column(Integer, default=0)
     error_msg = Column(Text, default="")
     started_at = Column(DateTime, default=datetime.datetime.utcnow)
     finished_at = Column(DateTime, nullable=True)
-    # Per-disk progress for rescan-all jobs (JSON-encoded)
-    current_disk = Column(Text, default="")  # disk currently being scanned
-    disk_progress = Column(Text, default="{}")  # JSON: {disk: {total, processed, status}}
+    current_disk = Column(Text, default="")
+    disk_progress = Column(Text, default="{}")
 
     def to_dict(self) -> dict:
         import json
@@ -208,13 +192,11 @@ class ScanJob(Base):
 
 
 class RecategorizeJob(Base):
-    """Tracks recategorize operations."""
-
     __tablename__ = "recategorize_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
-    scope = Column(Text, default="all")  # "all", "category:Games", etc.
-    status = Column(String(32), default="pending")  # pending|running|done|error
+    scope = Column(Text, default="all")
+    status = Column(String(32), default="pending")
     total = Column(Integer, default=0)
     processed = Column(Integer, default=0)
     changed = Column(Integer, default=0)
@@ -242,15 +224,13 @@ class RecategorizeJob(Base):
 
 
 class ArchiveJob(Base):
-    """Tracks every archive / restore operation on a group."""
-
     __tablename__ = "archive_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, nullable=False, index=True)
     group_name = Column(Text, default="")
-    action = Column(String(16), default="archive")  # "archive" | "restore"
-    status = Column(String(16), default="running")  # running | done | error
+    action = Column(String(16), default="archive")
+    status = Column(String(16), default="running")
     archive_path = Column(Text, nullable=True)
     archive_size_bytes = Column(Float, nullable=True)
     error_msg = Column(Text, nullable=True)
@@ -280,16 +260,14 @@ class ArchiveJob(Base):
 
 
 class DedupEntry(Base):
-    """One canonical DLL file stored in the shared DLL storage directory."""
-
     __tablename__ = "dedup_entries"
 
     id = Column(Integer, primary_key=True, index=True)
     sha256 = Column(String(64), nullable=False, unique=True, index=True)
-    shared_path = Column(Text, nullable=False)  # canonical copy in shared storage
-    dll_name = Column(String(512), default="")  # original filename (informational)
+    shared_path = Column(Text, nullable=False)
+    dll_name = Column(String(512), default="")
     size_bytes = Column(Float, default=0)
-    link_count = Column(Integer, default=0)  # how many hardlinks/symlinks exist
+    link_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     def to_dict(self) -> dict:
@@ -306,15 +284,13 @@ class DedupEntry(Base):
 
 
 class DedupLink(Base):
-    """Tracks each hardlink/symlink that replaced an original DLL."""
-
     __tablename__ = "dedup_links"
 
     id = Column(Integer, primary_key=True, index=True)
     dedup_entry_id = Column(Integer, nullable=False, index=True)
-    linked_path = Column(Text, nullable=False, unique=True)  # game-side path
+    linked_path = Column(Text, nullable=False, unique=True)
     group_id = Column(Integer, nullable=True, index=True)
-    link_type = Column(String(16), default="hardlink")  # "hardlink" | "symlink"
+    link_type = Column(String(16), default="hardlink")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -339,7 +315,6 @@ def _human_size(size: float) -> str:
 def init_db():
     logger.info("Initialising database at %s", DB_PATH)
     Base.metadata.create_all(bind=engine)
-    # Safe migration: add new columns if they don't exist yet (SQLite only)
     _migrate_add_columns()
     logger.info("Database ready.")
 
@@ -352,8 +327,6 @@ def _migrate_add_columns():
         "ALTER TABLE file_groups ADD COLUMN archive_path TEXT",
         "ALTER TABLE file_groups ADD COLUMN archived_at DATETIME",
         "ALTER TABLE file_groups ADD COLUMN archive_size_bytes REAL",
-        # dedup_entries and dedup_links are new tables — created by create_all, no ALTER needed
-        # Indices (CREATE INDEX IF NOT EXISTS is always safe to re-run)
         "CREATE INDEX IF NOT EXISTS ix_file_groups_category ON file_groups (category)",
     ]
     with engine.connect() as conn:
@@ -362,4 +335,4 @@ def _migrate_add_columns():
                 conn.execute(text(stmt))
                 conn.commit()
             except Exception:
-                pass  # column already exists — that's fine
+                pass

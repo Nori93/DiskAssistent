@@ -1,0 +1,12 @@
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  background: #f5f6fa;
+}

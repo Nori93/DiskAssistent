@@ -1,0 +1,16 @@
+<section class="page-content">
+  <h1>Disks</h1>
+  @for (disk of disks; track disk.path) {
+    <div class="disk-card">
+      <h3>{{ disk.path }}</h3>
+      <p>{{ disk.used_gb | number:'1.1-1' }} GB used / {{ disk.total_gb | number:'1.1-1' }} GB total</p>
+      <div class="usage-bar">
+        <div class="usage-fill" [style.width.%]="disk.percent"></div>
+      </div>
+      <button (click)="scan(disk.path)">Scan</button>
+    </div>
+  } @empty {
+    <p>Loading disks...</p>
+  }
+</section>
+

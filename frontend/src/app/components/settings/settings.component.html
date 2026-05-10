@@ -1,0 +1,19 @@
+<section class="page-content">
+  <h1>Settings</h1>
+  @if (settings) {
+    <form (submit)="save($event)">
+      <label>
+        Archive directory
+        <input type="text" [(ngModel)]="settings.archive_dir" name="archive_dir" />
+      </label>
+      <label>
+        Dedup shared directory
+        <input type="text" [(ngModel)]="settings.dedup_shared_dir" name="dedup_shared_dir" />
+      </label>
+      <button type="submit">Save</button>
+    </form>
+  } @else {
+    <p>Loading settings...</p>
+  }
+</section>
+
