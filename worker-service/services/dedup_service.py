@@ -26,10 +26,12 @@ import shutil
 import threading
 import uuid
 import zipfile
+import pathlib
 from pathlib import Path
 
 from config import logger
 from diskassistent_db.models import DedupEntry, DedupLink, FileGroup, SessionLocal
+from services import agent_client
 
 # â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -278,10 +280,15 @@ def extract_dlls_inline(
 
     # Collect DLLs in this group
     dll_files: list[dict] = []
-    for p in root_path.rglob("*"):
-        if p.is_file() and p.suffix.lower() in DLL_EXTENSIONS:
-            with contextlib.suppress(OSError):
-                dll_files.append({"path": p, "size": p.stat().st_size})
+    if agent_client.enabled():
+        for rec in agent_client.post("/dedup/scan-dlls", {"root_path": str(root_path)}):
+            dll_files.append({"path": pathlib.Path(rec["path"]), "size": rec["size_bytes"],
+                               "sha256_precalc": rec["sha256"]})
+    else:
+        for p in root_path.rglob("*"):
+            if p.is_file() and p.suffix.lower() in DLL_EXTENSIONS:
+                with contextlib.suppress(OSError):
+                    dll_files.append({"path": p, "size": p.stat().st_size})
 
     if not dll_files:
         if progress_callback:
@@ -297,7 +304,7 @@ def extract_dlls_inline(
         if progress_callback:
             progress_callback(int((i + 1) / max(total, 1) * 100))
         try:
-            h = sha256_file(orig_path)
+            h = f.get("sha256_precalc") or sha256_file(orig_path)
         except OSError:
             continue
 
@@ -323,7 +330,12 @@ def extract_dlls_inline(
                     )
                     continue
 
-                if not archive_path.exists():
+                if agent_client.enabled():
+                    agent_client.post("/dedup/zip-file", {
+                        "src_path": str(orig_path),
+                        "zip_path": str(archive_path),
+                    })
+                elif not archive_path.exists():
                     with zipfile.ZipFile(
                         str(archive_path), "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
                     ) as zf:
@@ -432,8 +444,11 @@ def cleanup_orphaned_shared_dlls(group_id: int, shared_dir: str, db) -> int:
                 continue
 
             # No active game needs this DLL â†’ delete zip and DB records
-            with contextlib.suppress(OSError):
-                Path(entry.shared_path).unlink()
+            with contextlib.suppress(Exception):
+                if agent_client.enabled():
+                    agent_client.post("/file/delete", {"path": entry.shared_path})
+                else:
+                    Path(entry.shared_path).unlink()
 
             index.pop(entry.sha256, None)
             db.query(DedupLink).filter(DedupLink.dedup_entry_id == entry_id).delete()

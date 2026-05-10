@@ -17,7 +17,7 @@ from pathlib import Path
 
 from config import logger
 from diskassistent_db.models import ArchiveJob, FileGroup, FileRecord, SessionLocal
-from services import dedup_service, settings_service
+from services import agent_client, dedup_service, settings_service
 
 # â”€â”€ In-memory job registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # { group_id: {"status": "idle|running|done|error", "progress": 0-100, "error": str|None} }
@@ -116,7 +116,16 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
         db.refresh(job_row)
 
         root = Path(grp.root_path)
-        if not root.exists():
+        if agent_client.enabled():
+            if not agent_client.path_exists(str(root)):
+                err = f"Root path not found: {root}"
+                _set_job(group_id, {"status": "error", "progress": 0, "error": err})
+                job_row.status = "error"
+                job_row.error_msg = err
+                job_row.finished_at = datetime.datetime.utcnow()
+                db.commit()
+                return
+        elif not root.exists():
             err = f"Root path not found: {root}"
             _set_job(group_id, {"status": "error", "progress": 0, "error": err})
             job_row.status = "error"
@@ -160,36 +169,55 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
                 )
 
         # â”€â”€ Step 2: zip game files (unique DLLs included, shared DLLs excluded) + embed manifest â”€â”€
+        # -- Step 2: zip game files (shared DLLs excluded) + embed manifest --
         _set_job(group_id, {"status": "running", "progress": 10, "error": None})
-        all_files = [p for p in root.rglob("*") if p.is_file() and p not in shared_paths_saved]
-        total = len(all_files)
-        logger.info("Archiving group %d (%s): %d files â†’ %s", group_id, grp.name, total, zip_path)
 
         dll_manifest_json = json.dumps(
             {"group_id": group_id, "group_name": grp.name, "dlls": dll_manifest},
             indent=2,
-        ).encode("utf-8")
+        )
 
-        with zipfile.ZipFile(
-            zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
-        ) as zf:
-            for i, fp in enumerate(all_files):
-                arcname = fp.relative_to(root.parent)
-                zf.write(fp, arcname)
-                # Scale 10% â†’ 90% across the file list
-                pct = 10 + int((i + 1) / max(total, 1) * 80)
-                _set_job(group_id, {"status": "running", "progress": pct, "error": None})
-            # Always embed the manifest (empty list if no shared dir configured)
-            zf.writestr("_dlls.json", dll_manifest_json)
+        if agent_client.enabled():
+            result = agent_client.post("/archive/create", {
+                "root_path": str(root),
+                "zip_path": str(zip_path),
+                "exclude_paths": [str(p) for p in shared_paths_saved],
+                "dll_manifest_json": dll_manifest_json,
+            }, timeout=1800.0)
+            archive_size = result["size_bytes"]
+            logger.info(
+                "Archiving group %d (%s): %d files -> %s",
+                group_id, grp.name, result["file_count"], zip_path,
+            )
+        else:
+            all_files = [
+                p for p in root.rglob("*") if p.is_file() and p not in shared_paths_saved
+            ]
+            total = len(all_files)
+            logger.info(
+                "Archiving group %d (%s): %d files -> %s", group_id, grp.name, total, zip_path
+            )
+            with zipfile.ZipFile(
+                zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+            ) as zf:
+                for i, fp in enumerate(all_files):
+                    arcname = fp.relative_to(root.parent)
+                    zf.write(fp, arcname)
+                    pct = 10 + int((i + 1) / max(total, 1) * 80)
+                    _set_job(group_id, {"status": "running", "progress": pct, "error": None})
+                zf.writestr("_dlls.json", dll_manifest_json.encode("utf-8"))
+            archive_size = zip_path.stat().st_size
+
         _set_job(group_id, {"status": "running", "progress": 90, "error": None})
-
         logger.info("DLL manifest embedded in zip (%d DLLs)", len(dll_manifest))
 
-        # â”€â”€ Step 3: delete original tree â”€â”€
-        shutil.rmtree(root)
+        # -- Step 3: delete original tree --
+        if agent_client.enabled():
+            agent_client.post("/file/delete-tree", {"path": str(root)})
+        else:
+            shutil.rmtree(root)
 
         # Persist to DB
-        archive_size = zip_path.stat().st_size
         grp.is_archived = True
         grp.archive_path = str(zip_path)
         grp.archived_at = datetime.datetime.utcnow()
@@ -204,9 +232,7 @@ def _archive_worker(group_id: int, archive_dir: str) -> None:
         db.commit()
 
         _set_job(group_id, {"status": "done", "progress": 100, "error": None})
-        logger.info(
-            "Archive done for group %d â†’ %s (%.1f MB)", group_id, zip_path, archive_size / 1e6
-        )
+        logger.info("Archive done for group %d -> %s (%.1f MB)", group_id, zip_path, archive_size / 1e6)
 
         # â”€â”€ Step 5: remove shared DLL zips no longer needed by any active game â”€â”€
         if shared_dir:
@@ -258,7 +284,12 @@ def _restore_worker(group_id: int) -> None:
         db.refresh(job_row)
 
         zip_path = Path(grp.archive_path)
-        if not zip_path.exists():
+        zip_exists = (
+            agent_client.path_exists(str(zip_path))
+            if agent_client.enabled()
+            else zip_path.exists()
+        )
+        if not zip_exists:
             err = f"Archive file not found: {zip_path}"
             _set_job(group_id, {"status": "error", "progress": 0, "error": err})
             job_row.status = "error"
@@ -268,21 +299,31 @@ def _restore_worker(group_id: int) -> None:
             return
 
         extract_to = Path(grp.root_path).parent
-        extract_to.mkdir(parents=True, exist_ok=True)
+        if not agent_client.enabled():
+            extract_to.mkdir(parents=True, exist_ok=True)
 
         logger.info("Restoring group %d (%s) from %s", group_id, grp.name, zip_path)
 
         # â”€â”€ Step 1: read embedded _dlls.json, then extract game files â”€â”€
+        # -- Step 1: extract game files --
         dll_entries: list[dict] = []
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            if "_dlls.json" in zf.namelist():
-                dll_entries = json.loads(zf.read("_dlls.json").decode("utf-8")).get("dlls", [])
-            members = [m for m in zf.namelist() if m != "_dlls.json"]
-            total = len(members)
-            for i, member in enumerate(members):
-                zf.extract(member, extract_to)
-                pct = int((i + 1) / max(total, 1) * 70)
-                _set_job(group_id, {"status": "running", "progress": pct, "error": None})
+        if agent_client.enabled():
+            result = agent_client.post("/archive/restore", {
+                "zip_path": str(zip_path),
+                "extract_to": str(extract_to),
+            }, timeout=1800.0)
+            dll_entries = result["dll_entries"]
+            _set_job(group_id, {"status": "running", "progress": 70, "error": None})
+        else:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                if "_dlls.json" in zf.namelist():
+                    dll_entries = json.loads(zf.read("_dlls.json").decode("utf-8")).get("dlls", [])
+                members = [m for m in zf.namelist() if m != "_dlls.json"]
+                total = len(members)
+                for i, member in enumerate(members):
+                    zf.extract(member, extract_to)
+                    pct = int((i + 1) / max(total, 1) * 70)
+                    _set_job(group_id, {"status": "running", "progress": pct, "error": None})
 
         # â”€â”€ Step 2: restore DLLs from shared storage â”€â”€
         # Legacy fallback: manifests written before embedded-json was introduced
@@ -304,12 +345,18 @@ def _restore_worker(group_id: int) -> None:
                         continue
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     try:
-                        with zipfile.ZipFile(str(dll_zip), "r") as zf:
-                            stored_name = zf.namelist()[0]
-                            zf.extract(stored_name, str(dest.parent))
-                        extracted_file = dest.parent / Path(stored_name).name
-                        if extracted_file != dest and extracted_file.exists():
-                            extracted_file.rename(dest)
+                        if agent_client.enabled():
+                            agent_client.post("/dedup/restore-dll", {
+                                "zip_path": str(dll_zip),
+                                "dst_dir": str(dest.parent),
+                            })
+                        else:
+                            with zipfile.ZipFile(str(dll_zip), "r") as zf:
+                                stored_name = zf.namelist()[0]
+                                zf.extract(stored_name, str(dest.parent))
+                            extracted_file = dest.parent / Path(stored_name).name
+                            if extracted_file != dest and extracted_file.exists():
+                                extracted_file.rename(dest)
                         restored += 1
                     except Exception as dll_exc:
                         logger.warning("DLL restore failed for %s: %s", dest, dll_exc)
@@ -324,7 +371,10 @@ def _restore_worker(group_id: int) -> None:
                 )
 
         # â”€â”€ Step 3: clean up archive zip â”€â”€
-        zip_path.unlink()
+        if agent_client.enabled():
+            agent_client.post("/file/delete", {"path": str(zip_path)})
+        else:
+            zip_path.unlink()
 
         # Update DB
         grp.is_archived = False

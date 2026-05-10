@@ -14,7 +14,15 @@ from pathlib import Path
 from ai.categorizer import categorize
 from config import logger
 from diskassistent_db.models import FileGroup, FileRecord, ScanJob, SessionLocal
+from services import agent_client
 from services.scanner import scan_directory
+
+
+def _file_source(root_path: str):
+    """Return an iterable of file-record dicts — via Host Agent or local scanner."""
+    if agent_client.enabled():
+        return agent_client.stream_scan(root_path)
+    return scan_directory(root_path)
 
 # Single-worker executor so scans are serialized and don't overload disk I/O
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="scanner")
@@ -169,7 +177,10 @@ def start_rescan_all() -> int:
     """
     from services.scanner import get_available_disks
 
-    disks = [d["path"] for d in get_available_disks()]
+    if agent_client.enabled():
+        disks = [d["path"] for d in agent_client.get("/disks")]
+    else:
+        disks = [d["path"] for d in get_available_disks()]
     if not disks:
         raise ValueError("No disks detected.")
 
@@ -213,16 +224,19 @@ def _run_scan(job_id: int, root_path: str):
         db.commit()
 
         # --- Phase 1: count files for progress reporting ---
-        logger.info("[Job %d] Counting files in %s â€¦", job_id, root_path)
-        total = sum(1 for _ in scan_directory(root_path))
+        logger.info("[Job %d] Counting files in %s ...", job_id, root_path)
+        if agent_client.enabled():
+            total = 0  # unknown until indexed; UI shows processed count
+        else:
+            total = sum(1 for _ in scan_directory(root_path))
         job.total_files = total
         db.commit()
 
         # --- Phase 2: index files ---
-        logger.info("[Job %d] Indexing %d files â€¦", job_id, total)
+        logger.info("[Job %d] Indexing files ...", job_id)
         processed = 0
 
-        for file_meta in scan_directory(root_path):
+        for file_meta in _file_source(root_path):
             fp = file_meta["full_path"]
 
             # Upsert: update if existing, insert if new
@@ -304,17 +318,20 @@ def _run_rescan_all(job_id: int, disks: list[str]):
         db.commit()
 
         # Phase 1 â€” count total files per disk (use seen-path dedup to match indexing)
-        logger.info("[Job %d] Counting files on all disks â€¦", job_id)
+        logger.info("[Job %d] Counting files on all disks ...", job_id)
         disk_totals: dict[str, int] = {}
         for disk in disks:
             try:
-                seen_count: set[str] = set()
-                n = 0
-                for fm in scan_directory(disk):
-                    fp = fm["full_path"]
-                    if fp not in seen_count:
-                        seen_count.add(fp)
-                        n += 1
+                if agent_client.enabled():
+                    n = 0  # skip pre-count when using agent
+                else:
+                    seen_count: set[str] = set()
+                    n = 0
+                    for fm in scan_directory(disk):
+                        fp = fm["full_path"]
+                        if fp not in seen_count:
+                            seen_count.add(fp)
+                            n += 1
             except Exception:
                 n = 0
             disk_totals[disk] = n
@@ -342,7 +359,7 @@ def _run_rescan_all(job_id: int, disks: list[str]):
             seen_paths: set[str] = set()  # guard against duplicate paths (junctions, symlinks)
             batch_values: list[dict] = []
             try:
-                for file_meta in scan_directory(disk):
+                for file_meta in _file_source(disk):
                     fp = file_meta["full_path"]
                     if fp in seen_paths:
                         continue

@@ -34,6 +34,13 @@ APP_VERSION = "2.0.0"
 APP_HOST = os.getenv("WORKER_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("WORKER_PORT", "8002"))
 
+# Host Agent URL — set this when running in a container so that filesystem
+# operations are delegated to the native Host Agent running on the host OS.
+# Example: http://host.containers.internal:8003
+# Leave empty to use local filesystem access (native / dev mode).
+HOST_AGENT_URL = os.getenv("HOST_AGENT_URL", "").rstrip("/")
+HOST_AGENT_SECRET = os.getenv("HOST_AGENT_SECRET", "")
+
 MAX_SCAN_SIZE = 0
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"}
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"}

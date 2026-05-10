@@ -42,6 +42,12 @@ APP_PORT = int(os.getenv("WEBAPI_PORT", "8001"))
 # Worker service base URL (for proxying heavy operations)
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8002")
 
+# Host Agent URL — set when running in a container so filesystem operations
+# (disks, file move/rename/delete) are delegated to the native Host Agent.
+# Example: http://host.containers.internal:8003
+HOST_AGENT_URL = os.getenv("HOST_AGENT_URL", "").rstrip("/")
+HOST_AGENT_SECRET = os.getenv("HOST_AGENT_SECRET", "")
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"}
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"}
 AUDIO_EXTENSIONS = {".mp3", ".flac", ".wav", ".aac", ".ogg", ".m4a"}
