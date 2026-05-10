@@ -1,8 +1,75 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // ── Legacy monolith (keep for reference / rollback) ─────────────────────
     {
-      "name": "DiskAssistent: FastAPI (uvicorn)",
+      "name": "[Legacy] Monolith: FastAPI (uvicorn --reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "${workspaceFolder}" },
+      "console": "integratedTerminal",
+      "jinja": true
+    },
+
+    // ── Microservices ───────────────────────────────────────────────────────
+    {
+      "name": "WebAPI (port 8001, --reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"],
+      "cwd": "${workspaceFolder}/webapi",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/webapi;${workspaceFolder}/database-service",
+        "WEBAPI_PORT": "8001",
+        "WORKER_URL": "http://localhost:8002"
+      },
+      "console": "integratedTerminal",
+      "jinja": true
+    },
+    {
+      "name": "Worker Service (port 8002, --reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"],
+      "cwd": "${workspaceFolder}/worker-service",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/worker-service;${workspaceFolder}/database-service",
+        "WORKER_PORT": "8002"
+      },
+      "console": "integratedTerminal",
+      "jinja": true
+    },
+    {
+      "name": "Frontend: ng serve (port 4200)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/frontend/node_modules/@angular/cli/bin/ng.js",
+      "args": ["serve", "--proxy-config", "proxy.conf.json"],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true
+    }
+  ],
+
+  "compounds": [
+    {
+      "name": "DiskAssistent — All Services",
+      "configurations": [
+        "Worker Service (port 8002, --reload)",
+        "WebAPI (port 8001, --reload)",
+        "Frontend: ng serve (port 4200)"
+      ],
+      "stopAll": true,
+      "presentation": { "group": "DiskAssistent", "order": 1 }
+    }
+  ]
+}
+
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",

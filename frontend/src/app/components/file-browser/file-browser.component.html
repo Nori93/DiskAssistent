@@ -1,0 +1,28 @@
+<section class="page-content">
+  <h1>Files</h1>
+  <div class="filters">
+    <select [(ngModel)]="category" (change)="load()">
+      <option value="">All categories</option>
+      @for (cat of categories; track cat) {
+        <option [value]="cat">{{ cat }}</option>
+      }
+    </select>
+    <input type="text" placeholder="Search..." [(ngModel)]="search" (input)="load()" />
+  </div>
+  <table class="file-table">
+    <thead><tr><th>Name</th><th>Category</th><th>Size</th><th>Path</th></tr></thead>
+    <tbody>
+      @for (file of files; track file.id) {
+        <tr>
+          <td>{{ file.name }}</td>
+          <td>{{ file.category }}</td>
+          <td>{{ (file.size / 1048576) | number:'1.1-1' }} MB</td>
+          <td>{{ file.path }}</td>
+        </tr>
+      } @empty {
+        <tr><td colspan="4">No files found.</td></tr>
+      }
+    </tbody>
+  </table>
+</section>
+

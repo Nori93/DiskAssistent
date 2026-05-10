@@ -7,10 +7,10 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from database.models import FileGroup, FileRecord, get_db
+from diskassistent_db.models import FileGroup, FileRecord, get_db
 
 router = APIRouter(prefix="/api/groups", tags=["Groups"])
 
@@ -18,9 +18,6 @@ router = APIRouter(prefix="/api/groups", tags=["Groups"])
 @router.get("/")
 def list_groups(category: str | None = None, db: Session = Depends(get_db)):
     """Return all groups, optionally filtered by category."""
-    from sqlalchemy import select
-
-    # Correlated subquery for file count — uses the index on files.group_id
     file_count_subq = (
         select(func.count(FileRecord.id))
         .where(FileRecord.group_id == FileGroup.id)
@@ -28,10 +25,7 @@ def list_groups(category: str | None = None, db: Session = Depends(get_db)):
         .scalar_subquery()
     )
 
-    q = (
-        db.query(FileGroup, file_count_subq.label("file_count"))
-        .order_by(FileGroup.name)
-    )
+    q = db.query(FileGroup, file_count_subq.label("file_count")).order_by(FileGroup.name)
     if category:
         q = q.filter(FileGroup.category == category)
 
@@ -43,15 +37,13 @@ def list_groups(category: str | None = None, db: Session = Depends(get_db)):
         d["file_count"] = file_count
         result.append(d)
 
-    # Count ungrouped files
     ungrouped_q = db.query(func.count(FileRecord.id)).filter(
         FileRecord.group_id == None  # noqa: E711
     )
     if category:
         ungrouped_q = ungrouped_q.filter(FileRecord.category == category)
-    ungrouped_count = ungrouped_q.scalar() or 0
 
-    return {"groups": result, "ungrouped_count": ungrouped_count}
+    return {"groups": result, "ungrouped_count": ungrouped_q.scalar() or 0}
 
 
 @router.get("/{group_id}")
@@ -68,9 +60,7 @@ def get_group(group_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{group_id}/tree")
 def get_group_tree(group_id: int, db: Session = Depends(get_db)):
-    """Return the full directory tree for a group.
-    The tree is built once and cached in file_tree_json; invalidated on rescan/regroup.
-    """
+    """Return the full directory tree for a group (cached in DB)."""
     grp = db.get(FileGroup, group_id)
     if not grp:
         raise HTTPException(404, "Group not found.")
@@ -85,7 +75,6 @@ def get_group_tree(group_id: int, db: Session = Depends(get_db)):
 
 
 def _build_group_tree(db, grp: FileGroup) -> dict:
-    """Build a nested directory tree from a group's file records."""
     sep = os.sep
     root_path = grp.root_path.rstrip(sep)
     root_lower = root_path.lower()
@@ -106,11 +95,9 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
 
     for f in files:
         rel = f.full_path
-        rel = rel[len(root_path) :].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
-
-        # Split into folder parts (drop the filename at the end)
+        rel = rel[len(root_path):].lstrip("/\\") if rel.lower().startswith(root_lower) else f.name
         parts = rel.replace("\\", "/").split("/")
-        parts.pop()  # last element is the filename, not a folder
+        parts.pop()
 
         node = root_node
         for part in parts:
@@ -124,7 +111,6 @@ def _build_group_tree(db, grp: FileGroup) -> dict:
                     "files": [],
                 }
             node = node["children"][part]
-
         node["files"].append(f.to_dict())
 
     return root_node
@@ -149,35 +135,12 @@ def update_group(group_id: int, body: UpdateGroupBody, db: Session = Depends(get
     return grp.to_dict()
 
 
-@router.post("/{group_id}/refresh-icon")
-def refresh_group_icon(group_id: int, db: Session = Depends(get_db)):
-    """Re-extract the exe icon for a group and store it in thumbnail_path."""
-    from backend.services.icon_service import extract_group_icon, pick_best_exe
-
-    grp = db.get(FileGroup, group_id)
-    if not grp:
-        raise HTTPException(404, "Group not found.")
-
-    exe = pick_best_exe(db, group_id, grp.root_path)
-    if not exe:
-        raise HTTPException(422, "No .exe file found in this group.")
-
-    url = extract_group_icon(group_id, exe)
-    if not url:
-        raise HTTPException(422, "Icon extraction failed (Windows only, exe must exist on disk).")
-
-    grp.thumbnail_path = url
-    db.commit()
-    return {"thumbnail_path": url}
-
-
 @router.delete("/{group_id}")
 def delete_group(group_id: int, db: Session = Depends(get_db)):
-    """Remove the group record (and unlink its files). Files on disk are NOT deleted."""
+    """Remove the group record and unlink its files. Files on disk are NOT deleted."""
     grp = db.get(FileGroup, group_id)
     if not grp:
         raise HTTPException(404, "Group not found.")
-    # Unlink all member files so they appear as ungrouped on the next scan
     db.query(FileRecord).filter(FileRecord.group_id == group_id).update({"group_id": None})
     db.delete(grp)
     db.commit()

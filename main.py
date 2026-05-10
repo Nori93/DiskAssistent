@@ -9,7 +9,7 @@ from pathlib import Path
 # Ensure project root is on sys.path so `backend`, `database`, `ai` are importable
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,15 +58,38 @@ templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
 
 # ── API routers ───────────────────────────────────────────────────────────────
 # init_db() must run before routers are imported — E402 is intentional here
-from backend.routers import disks, files, groups, operations, scan  # noqa: E402
+from backend.routers import archive, dedup, disks, files, groups, operations, scan  # noqa: E402
 
 app.include_router(disks.router)
 app.include_router(scan.router)
 app.include_router(files.router)
 app.include_router(operations.router)
 app.include_router(groups.router)
+app.include_router(archive.router)
+app.include_router(dedup.router)
+
+# ── No-cache middleware for static JS/CSS (dev convenience) ──────────────────
+@app.middleware("http")
+async def no_cache_static(request: Request, call_next):
+    response: Response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 # ── Frontend route ────────────────────────────────────────────────────────────
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/static/img/favicon.svg")
+
+
+@app.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
+async def chrome_devtools():
+    """Suppress Chrome DevTools discovery 404 logs."""
+    return {}
 
 
 @app.get("/", response_class=HTMLResponse)
