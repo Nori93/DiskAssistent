@@ -73,6 +73,10 @@ export class ApiService {
     return this.http.post<any>('/api/files/cleanup', {});
   }
 
+  startRegroup(): Observable<any> {
+    return this.http.post<any>('/api/files/regroup', {});
+  }
+
   // ── Groups ─────────────────────────────────────────────────────────────────
   getGroups(params: Record<string, any> = {}): Observable<any> {
     let httpParams = new HttpParams();
@@ -96,6 +100,10 @@ export class ApiService {
 
   deleteGroup(id: number): Observable<any> {
     return this.http.delete<any>(`/api/groups/${id}`);
+  }
+
+  refreshGroupIcon(id: number): Observable<any> {
+    return this.http.post<any>(`/api/groups/${id}/refresh-icon`, {});
   }
 
   // ── Operations ─────────────────────────────────────────────────────────────
