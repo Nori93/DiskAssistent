@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     // ── Legacy monolith (keep for reference / rollback) ─────────────────────
     {
       "name": "[Legacy] Monolith: FastAPI (uvicorn --reload)",
@@ -11,7 +12,8 @@
       "cwd": "${workspaceFolder}",
       "env": { "PYTHONPATH": "${workspaceFolder}" },
       "console": "integratedTerminal",
-      "jinja": true
+      "jinja": true,
+      "presentation": { "group": "Legacy", "order": 1 }
     },
 
     // ── Microservices ───────────────────────────────────────────────────────
@@ -28,7 +30,8 @@
         "WORKER_URL": "http://localhost:8002"
       },
       "console": "integratedTerminal",
-      "jinja": true
+      "jinja": true,
+      "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
       "name": "Worker Service (port 8002, --reload)",
@@ -42,14 +45,58 @@
         "WORKER_PORT": "8002"
       },
       "console": "integratedTerminal",
-      "jinja": true
+      "jinja": true,
+      "presentation": { "group": "DiskAssistent", "order": 3 }
+    },
+    {
+      "name": "Host Agent (port 8003, --reload)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"],
+      "cwd": "${workspaceFolder}/host-agent",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/host-agent",
+        "HOST_AGENT_PORT": "8003",
+        "HOST_AGENT_SECRET": ""
+      },
+      "console": "integratedTerminal",
+      "jinja": true,
+      "presentation": { "group": "DiskAssistent", "order": 4 }
     },
     {
       "name": "Frontend: ng serve (port 4200)",
       "type": "node-terminal",
       "request": "launch",
       "command": "ng serve --proxy-config proxy.conf.json --open",
-      "cwd": "${workspaceFolder}/frontend"
+      "cwd": "${workspaceFolder}/frontend",
+      "presentation": { "group": "DiskAssistent", "order": 5 }
+    },
+
+    // ── Podman ──────────────────────────────────────────────────────────────
+    {
+      "name": "Podman: up --build",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "podman compose -f compose.yml up --build",
+      "cwd": "${workspaceFolder}",
+      "presentation": { "group": "Podman", "order": 1 }
+    },
+    {
+      "name": "Podman: up (no rebuild)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "podman compose -f compose.yml up",
+      "cwd": "${workspaceFolder}",
+      "presentation": { "group": "Podman", "order": 2 }
+    },
+    {
+      "name": "Podman: down",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "podman compose -f compose.yml down",
+      "cwd": "${workspaceFolder}",
+      "presentation": { "group": "Podman", "order": 3 }
     }
   ],
 
@@ -63,88 +110,26 @@
       ],
       "stopAll": true,
       "presentation": { "group": "DiskAssistent", "order": 1 }
-    }
-  ]
-}
-
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "main:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload"
+    },
+    {
+      "name": "DiskAssistent — All Services + Host Agent",
+      "configurations": [
+        "Host Agent (port 8003, --reload)",
+        "Worker Service (port 8002, --reload)",
+        "WebAPI (port 8001, --reload)",
+        "Frontend: ng serve (port 4200)"
       ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "console": "integratedTerminal",
-      "jinja": true
+      "stopAll": true,
+      "presentation": { "group": "DiskAssistent", "order": 2 }
     },
     {
-      "name": "DiskAssistent: FastAPI (no reload)",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "main:app",
-        "--host", "0.0.0.0",
-        "--port", "8001"
+      "name": "Podman + Host Agent (native)",
+      "configurations": [
+        "Host Agent (port 8003, --reload)",
+        "Podman: up --build"
       ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "console": "integratedTerminal",
-      "jinja": true
-    },
-    {
-      "name": "DiskAssistent: run.py",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/run.py",
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "DiskAssistent: Open in Browser",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://localhost:8000",
-      "webRoot": "${workspaceFolder}/frontend/static",
-      "sourceMaps": false,
-      "presentation": {
-        "group": "DiskAssistent",
-        "order": 4
-      }
-    },
-    {
-      "name": "DiskAssistent: FastAPI + Browser",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "main:app",
-        "--host", "0.0.0.0",
-        "--port", "8000",
-        "--reload"
-      ],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
-      "console": "integratedTerminal",
-      "jinja": true,
-      "serverReadyAction": {
-        "pattern": "Application startup complete",
-        "uriFormat": "http://localhost:8000",
-        "action": "openExternally"
-      }
+      "stopAll": true,
+      "presentation": { "group": "Podman", "order": 1 }
     }
   ]
 }
