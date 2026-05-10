@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from backend.config import (
+from config import (
     AI_BASE_URL,
     AI_MODEL,
     AUDIO_EXTENSIONS,

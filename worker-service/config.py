@@ -46,3 +46,7 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"}
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm"}
 AUDIO_EXTENSIONS = {".mp3", ".flac", ".wav", ".aac", ".ogg", ".m4a"}
 DOC_EXTENSIONS = {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".md", ".ppt", ".pptx"}
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+AI_BASE_URL = os.getenv("AI_BASE_URL", "")  # empty = use OpenAI cloud
+AI_MODEL = os.getenv("AI_MODEL", "gpt-3.5-turbo")
