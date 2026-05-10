@@ -26,25 +26,22 @@ Supports Windows and Linux with AI-powered file categorization, background disk 
 ## Architecture
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph Browser["🌐 Browser"]
-        direction TB
         SPA["Angular 18 SPA\napp.component.ts"]
         API_SVC["api.service.ts\nHTTP client"]
         SPA --> API_SVC
     end
 
-    subgraph WebAPI["⚡ WebAPI — FastAPI (webapi/) :8001"]
-        direction TB
+    subgraph WebAPI["⚡ WebAPI — FastAPI webapi/ :8001"]
         W_DISKS["routers/disks.py\n/api/disks/"]
         W_FILES["routers/files.py\n/api/files/"]
         W_GROUPS["routers/groups.py\n/api/groups/"]
         W_OPS["routers/operations.py\n/api/operations/"]
-        W_PROXY["Reverse Proxy\n/api/scan, /api/archive, /api/dedup"]
+        W_PROXY["Reverse Proxy\n/api/scan /api/archive /api/dedup"]
     end
 
-    subgraph Worker["⚙️ Worker Service — FastAPI (worker-service/) :8002"]
-        direction TB
+    subgraph Worker["⚙️ Worker Service — FastAPI worker-service/ :8002"]
         WK_SCAN["routers/scan.py\n/api/scan/"]
         WK_ARCHIVE["routers/archive.py\n/api/archive/"]
         WK_DEDUP["routers/dedup.py\n/api/dedup/"]
@@ -52,7 +49,6 @@ graph TB
     end
 
     subgraph WorkerSvc["🔧 Worker Services"]
-        direction TB
         SVC_SCAN["scan_service.py\nBackground scan worker"]
         SVC_SCANNER["scanner.py\nFilesystem walker"]
         SVC_GROUPER["grouper.py\nGroup detection"]
@@ -64,28 +60,27 @@ graph TB
         EXECUTOR["ThreadPoolExecutor\nmax_workers=1"]
     end
 
-    subgraph AI["🤖 AI Categorization (ai/)"]
-        AI_RULES["Rule-based heuristics\n(extension + path keywords)"]
-        AI_ML["TF-IDF + LogisticRegression\n(scikit-learn)"]
-        AI_LLM["OpenAI API fallback\n(optional — OPENAI_API_KEY)"]
+    subgraph AI["🤖 AI Categorization ai/"]
+        AI_RULES["Rule-based heuristics\nextension + path keywords"]
+        AI_ML["TF-IDF + LogisticRegression\nscikit-learn"]
+        AI_LLM["OpenAI API fallback\noptional OPENAI_API_KEY"]
         AI_RULES --> AI_ML --> AI_LLM
     end
 
-    subgraph DbPkg["📦 Database Service (database-service/)"]
+    subgraph DbPkg["📦 Database Service database-service/"]
         MODELS["diskassistent_db/models.py\nFileRecord · FileGroup · ScanJob\nArchiveJob · RecategorizeJob"]
     end
 
     subgraph Data["🗄️ Storage"]
         DB[("SQLite\ndatabase/diskassistent.db")]
-        FS["Local filesystem\n(disk drives)"]
+        FS["Local filesystem\ndisk drives"]
         THUMBS["frontend/static/img/thumbnails/\nPNG icons"]
-        SETTINGS["settings.json\narchive_dir · dedup_shared_dir"]
-        SHARED["Shared DLL directory\n(configurable)"]
-        ZIPSTORE["Archive directory\n(configurable)"]
+        ZIPSTORE["Archive directory\nconfigurable"]
+        SHARED["Shared DLL directory\nconfigurable"]
     end
 
     API_SVC -->|"HTTP REST /api/*"| WebAPI
-    W_PROXY -->|"HTTP → :8002"| Worker
+    W_PROXY -->|"HTTP :8002"| Worker
 
     W_DISKS --> SVC_SCANNER
     W_FILES --> DbPkg
@@ -118,7 +113,7 @@ graph TB
     DbPkg --> DB
     SVC_SCANNER --> FS
     SVC_FILE_OPS --> FS
-    SVC_ICON -->|"PowerShell .exe → PNG"| THUMBS
+    SVC_ICON -->|"PowerShell .exe to PNG"| THUMBS
     SVC_ARCHIVE --> ZIPSTORE
     SVC_DEDUP --> SHARED
 ```
