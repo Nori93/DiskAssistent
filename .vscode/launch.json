@@ -78,7 +78,7 @@
       "name": "Podman: up --build",
       "type": "node-terminal",
       "request": "launch",
-      "command": "podman-compose -f compose.yml up --build",
+      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml up --build",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 1 }
     },
@@ -86,7 +86,7 @@
       "name": "Podman: up (no rebuild)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "podman-compose -f compose.yml up",
+      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml up",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 2 }
     },
@@ -94,7 +94,7 @@
       "name": "Podman: down",
       "type": "node-terminal",
       "request": "launch",
-      "command": "podman-compose -f compose.yml down",
+      "command": "D:\\Projects\\DiskAssistent\\.venv\\Scripts\\podman-compose.exe -f compose.yml down",
       "cwd": "${workspaceFolder}",
       "presentation": { "group": "Podman", "order": 3 }
     }
