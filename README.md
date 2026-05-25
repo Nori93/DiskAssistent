@@ -283,7 +283,7 @@ DiskAssistent/
 │   │   ├── disks.py            ← GET /api/disks/
 │   │   ├── files.py            ← GET/PATCH /api/files/
 │   │   ├── groups.py           ← GET/PATCH /api/groups/
-│   │   └── operations.py       ← POST /api/operations/{move,rename,delete}
+│   │   └── operations.py       ← POST /api/operations/{move,rename,delete,open-folder}
 │   └── services/
 │       ├── scanner.py          ← Disk listing + directory tree
 │       ├── file_ops.py         ← Move / rename / delete
@@ -372,6 +372,7 @@ All endpoints are served by the WebAPI on port 8001. Heavy operations are transp
 | GET | `/api/files/{id}` | Single file detail |
 | PATCH | `/api/files/{id}` | Update category/tags/desc |
 | POST | `/api/files/recategorize` | Re-run AI categorization |
+| POST | `/api/files/regroup` | Rebuild file groups from the current database |
 | POST | `/api/files/cleanup` | Remove missing file records |
 
 ### Groups
@@ -524,9 +525,11 @@ Environment variables (all optional):
 | `GET` | `/api/scan/history` | 50 most recent scan jobs |
 | `GET` | `/api/files/` | Query/filter scanned files |
 | `PATCH` | `/api/files/` | Update file metadata |
+| `POST` | `/api/files/regroup` | Rebuild file groups from the current database |
 | `POST` | `/api/operations/move` | Move a file |
 | `POST` | `/api/operations/rename` | Rename a file |
 | `POST` | `/api/operations/delete` | Delete a file |
+| `POST` | `/api/operations/open-folder` | Open folder in OS explorer |
 | `GET` | `/api/groups/` | List detected folder groups |
 | `PATCH` | `/api/groups/` | Update group metadata |
 
@@ -630,7 +633,7 @@ DiskAssistent/
 │   │   ├── disks.py         ← GET /api/disks/
 │   │   ├── scan.py          ← POST /api/scan/start, GET /api/scan/status/{id}
 │   │   ├── files.py         ← GET/PATCH /api/files/
-│   │   ├── operations.py    ← POST /api/operations/{move,rename,delete}
+│   │   ├── operations.py    ← POST /api/operations/{move,rename,delete,open-folder}
 │   │   └── groups.py        ← GET/PATCH /api/groups/
 │   └── services/
 │       ├── scanner.py       ← Recursive filesystem scanning
@@ -745,9 +748,11 @@ Users can manually override any category from the file detail modal.
 | GET      | `/api/files/stats`               | Aggregate statistics         |
 | GET      | `/api/files/{id}`                | Single file detail           |
 | PATCH    | `/api/files/{id}`                | Update category/tags/desc    |
+| POST     | `/api/files/regroup`             | Rebuild file groups from DB  |
 | POST     | `/api/operations/move`           | Move a file                  |
 | POST     | `/api/operations/rename`         | Rename a file                |
 | DELETE   | `/api/operations/delete`         | Delete a file (confirm=true) |
+| POST     | `/api/operations/open-folder`    | Open folder in OS explorer   |
 | GET      | `/api/groups/`                   | List detected groups         |
 | GET      | `/api/groups/{id}`               | Group detail with files      |
 | PATCH    | `/api/groups/{id}`               | Update group metadata        |
