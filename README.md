@@ -281,7 +281,7 @@ DiskAssistent/
 │   ├── requirements.txt
 │   ├── routers/
 │   │   ├── disks.py            ← GET /api/disks/
-│   │   ├── files.py            ← GET/PATCH /api/files/
+│   │   ├── files.py            ← GET/PATCH /api/files/, POST /api/files/recategorize
 │   │   ├── groups.py           ← GET/PATCH /api/groups/
 │   │   └── operations.py       ← POST /api/operations/{move,rename,delete}
 │   └── services/
@@ -372,7 +372,14 @@ All endpoints are served by the WebAPI on port 8001. Heavy operations are transp
 | GET | `/api/files/{id}` | Single file detail |
 | PATCH | `/api/files/{id}` | Update category/tags/desc |
 | POST | `/api/files/recategorize` | Re-run AI categorization |
+| GET | `/api/files/recategorize/status/{job_id}` | Poll recategorize job progress |
+| GET | `/api/files/recategorize/history` | 50 most recent recategorize jobs |
 | POST | `/api/files/cleanup` | Remove missing file records |
+
+`/api/files/recategorize/status/{job_id}` and `/api/files/recategorize/history`
+return `RecategorizeJob` records with `id`, `scope`, `status`, `total`,
+`processed`, `changed`, `progress_pct`, `error_msg`, `started_at`,
+`finished_at`, and `duration_sec`.
 
 ### Groups
 | Method | Endpoint | Description |
@@ -524,6 +531,9 @@ Environment variables (all optional):
 | `GET` | `/api/scan/history` | 50 most recent scan jobs |
 | `GET` | `/api/files/` | Query/filter scanned files |
 | `PATCH` | `/api/files/` | Update file metadata |
+| `POST` | `/api/files/recategorize` | Re-run AI categorization |
+| `GET` | `/api/files/recategorize/status/{job_id}` | Poll recategorize job progress |
+| `GET` | `/api/files/recategorize/history` | 50 most recent recategorize jobs |
 | `POST` | `/api/operations/move` | Move a file |
 | `POST` | `/api/operations/rename` | Rename a file |
 | `POST` | `/api/operations/delete` | Delete a file |
@@ -629,7 +639,7 @@ DiskAssistent/
 │   ├── routers/
 │   │   ├── disks.py         ← GET /api/disks/
 │   │   ├── scan.py          ← POST /api/scan/start, GET /api/scan/status/{id}
-│   │   ├── files.py         ← GET/PATCH /api/files/
+│   │   ├── files.py         ← GET/PATCH /api/files/, POST /api/files/recategorize
 │   │   ├── operations.py    ← POST /api/operations/{move,rename,delete}
 │   │   └── groups.py        ← GET/PATCH /api/groups/
 │   └── services/
@@ -639,7 +649,7 @@ DiskAssistent/
 │       └── scan_service.py  ← Background scan worker
 │
 ├── database/
-│   ├── models.py            ← SQLAlchemy models (FileRecord, FileGroup, ScanJob)
+│   ├── models.py            ← SQLAlchemy models (FileRecord, FileGroup, ScanJob, RecategorizeJob)
 │   └── diskassistent.db     ← Auto-created on first run
 │
 ├── ai/
@@ -745,6 +755,9 @@ Users can manually override any category from the file detail modal.
 | GET      | `/api/files/stats`               | Aggregate statistics         |
 | GET      | `/api/files/{id}`                | Single file detail           |
 | PATCH    | `/api/files/{id}`                | Update category/tags/desc    |
+| POST     | `/api/files/recategorize`        | Re-run AI categorization     |
+| GET      | `/api/files/recategorize/status/{job_id}` | Poll recategorize job progress |
+| GET      | `/api/files/recategorize/history` | 50 most recent recategorize jobs |
 | POST     | `/api/operations/move`           | Move a file                  |
 | POST     | `/api/operations/rename`         | Rename a file                |
 | DELETE   | `/api/operations/delete`         | Delete a file (confirm=true) |
