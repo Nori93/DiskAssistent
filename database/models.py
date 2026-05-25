@@ -84,7 +84,10 @@ class FileRecord(Base):
     size_bytes = Column(Float, default=0)
     created_at = Column(DateTime, nullable=True)
     modified_at = Column(DateTime, nullable=True)
-    scanned_at = Column(DateTime, default=datetime.datetime.utcnow)
+    scanned_at = Column(
+        DateTime,
+        default=lambda: datetime.datetime.now(datetime.timezone.utc),
+    )
 
     # Categorization
     category = Column(String(64), default="Other", index=True)
