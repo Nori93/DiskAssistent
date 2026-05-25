@@ -381,6 +381,7 @@ All endpoints are served by the WebAPI on port 8001. Heavy operations are transp
 | GET | `/api/groups/{id}` | Group detail with files |
 | PATCH | `/api/groups/{id}` | Update group metadata |
 | DELETE | `/api/groups/{id}` | Delete a group |
+| POST | `/api/groups/{id}/refresh-icon` | Re-extract group icon from an executable (Windows only; requires PowerShell) |
 
 ### Operations
 | Method | Endpoint | Description |
@@ -428,6 +429,8 @@ Users can manually override any category from the file detail view.
 - On **Windows**: disk list is built from Windows drive letters (A–Z).
 - On **Linux/macOS**: disk list uses `psutil.disk_partitions()`.
 - File paths use `pathlib.Path` throughout, so separators are handled automatically.
+- Icon extraction, including `POST /api/groups/{id}/refresh-icon`, is
+  Windows-only and requires `powershell.exe`.
 
 ---
 
@@ -718,6 +721,8 @@ http://localhost:8000
 - On **Windows**: disk list is built from Windows drive letters (A–Z).
 - On **Linux/macOS**: disk list uses `psutil.disk_partitions()` (requires `psutil`).
 - File paths use `pathlib.Path` throughout, so separators are handled automatically.
+- Icon extraction, including `POST /api/groups/{id}/refresh-icon`, is
+  Windows-only and requires `powershell.exe`.
 
 ---
 
@@ -751,6 +756,7 @@ Users can manually override any category from the file detail modal.
 | GET      | `/api/groups/`                   | List detected groups         |
 | GET      | `/api/groups/{id}`               | Group detail with files      |
 | PATCH    | `/api/groups/{id}`               | Update group metadata        |
+| POST     | `/api/groups/{id}/refresh-icon`  | Re-extract group icon (Windows only; requires PowerShell) |
 
 Interactive API docs available at: `http://localhost:8000/docs`
 
