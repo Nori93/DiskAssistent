@@ -19,6 +19,8 @@ env/
 database/diskassistent.db
 database/diskassistent.db-shm
 database/diskassistent.db-wal
+DiskAssistent.session.sql
+*.session.sql
 
 # Logs
 logs/*.log
